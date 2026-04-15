@@ -22,7 +22,7 @@ export default function UdhaariPage() {
   return (
     <AppShell>
       <div className="max-w-lg mx-auto p-4 lg:p-6">
-        <h1 className="text-xl font-bold text-foreground mb-1">Udhaari</h1>
+        <h1 className="text-xl font-bold text-heading mb-1">Udhaari</h1>
         <p className="text-sm text-muted-foreground mb-5">Credit given to customers</p>
 
         {/* Total Card */}
