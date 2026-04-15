@@ -15,7 +15,7 @@ export default function AddPage() {
   return (
     <AppShell>
       <div className="max-w-md mx-auto p-4 pt-8">
-        <h1 className="text-xl font-bold text-foreground mb-1">Add Entry</h1>
+        <h1 className="text-xl font-bold text-heading mb-1">Add Entry</h1>
         <p className="text-sm text-muted-foreground mb-6">Choose how to add</p>
 
         <div className="grid grid-cols-2 gap-3">

@@ -60,7 +60,7 @@ export default function InventoryPage() {
           </div>
         )}
 
-        <h1 className="text-xl font-bold text-foreground mb-1">Inventory</h1>
+        <h1 className="text-xl font-bold text-heading mb-1">Inventory</h1>
         <p className="text-sm text-muted-foreground mb-5">Manage your stock</p>
 
         <div className="lg:grid lg:grid-cols-3 lg:gap-6">

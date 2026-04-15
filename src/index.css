@@ -6,26 +6,27 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 220 20% 10%;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card: 210 40% 98%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 142 71% 45%;
+    --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
+    --primary-dark: 224 76% 33%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 220 20% 10%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 220 14% 96%;
-    --accent-foreground: 220 20% 10%;
+    --accent: 214 95% 93%;
+    --accent-foreground: 224 76% 33%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -41,18 +42,18 @@
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 142 71% 45%;
+    --ring: 217 91% 60%;
 
     --radius: 1rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 214 95% 93%;
+    --sidebar-accent-foreground: 224 76% 33%;
     --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 217 91% 60%;
 
     --nav-height: 4.5rem;
   }
@@ -71,11 +72,13 @@
 
 @layer utilities {
   .text-rupee {
-    @apply text-4xl font-extrabold tracking-tight text-foreground;
+    @apply text-4xl font-extrabold tracking-tight;
+    color: hsl(var(--primary-dark));
   }
 
   .text-rupee-lg {
-    @apply text-5xl font-extrabold tracking-tight text-foreground;
+    @apply text-5xl font-extrabold tracking-tight;
+    color: hsl(var(--primary-dark));
   }
 
   .card-shadow {
@@ -84,6 +87,10 @@
 
   .card-shadow-md {
     box-shadow: 0 4px 6px -1px hsl(0 0% 0% / 0.05), 0 2px 4px -2px hsl(0 0% 0% / 0.05);
+  }
+
+  .text-heading {
+    color: hsl(var(--primary-dark));
   }
 }
 
@@ -108,6 +115,26 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes draw-line {
+  from { stroke-dashoffset: 1000; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px 4px hsl(217 91% 60% / 0.2); }
+  50% { box-shadow: 0 0 40px 8px hsl(217 91% 60% / 0.4); }
+}
+
+@keyframes ripple {
+  0% { transform: scale(1); opacity: 0.4; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
 .animate-pulse-success {
   animation: pulse-success 0.6s ease-out;
 }
@@ -120,6 +147,22 @@
   animation: fade-up 0.3s ease-out forwards;
 }
 
+.animate-count-up {
+  animation: count-up 0.5s ease-out forwards;
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
 .wave-bar {
   animation: wave 0.6s ease-in-out infinite;
+}
+
+/* Hover interactions */
+.hover-blue {
+  transition: background-color 0.15s ease;
+}
+.hover-blue:hover {
+  background-color: hsl(214 95% 93%);
 }

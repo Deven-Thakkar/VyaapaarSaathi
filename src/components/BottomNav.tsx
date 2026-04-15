@@ -1,12 +1,12 @@
-import { Home, Plus, TrendingUp, Package, HandCoins, MoreHorizontal } from "lucide-react";
+import { Home, Plus, TrendingUp, Package, HandCoins } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const navItems = [
-  { icon: Home, label: "Home", path: "/home" },
-  { icon: TrendingUp, label: "Sales", path: "/sales" },
-  { icon: Plus, label: "Add", path: "/add", isCenter: true },
-  { icon: Package, label: "Inventory", path: "/inventory" },
-  { icon: HandCoins, label: "Udhaari", path: "/udhaari" },
+  { icon: Home, label: "Home", path: "/home", badge: 0 },
+  { icon: TrendingUp, label: "Sales", path: "/sales", badge: 0 },
+  { icon: Plus, label: "Add", path: "/add", isCenter: true, badge: 0 },
+  { icon: Package, label: "Inventory", path: "/inventory", badge: 4 },
+  { icon: HandCoins, label: "Udhaari", path: "/udhaari", badge: 5 },
 ];
 
 export default function BottomNav() {
@@ -14,7 +14,7 @@ export default function BottomNav() {
   const navigate = useNavigate();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-card border-t border-border card-shadow-md lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border card-shadow-md md:hidden">
       <div className="flex items-center justify-around h-[var(--nav-height)] max-w-lg mx-auto px-2">
         {navItems.map((item) => {
           const active = location.pathname === item.path;
@@ -33,12 +33,17 @@ export default function BottomNav() {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${
+              className={`relative flex flex-col items-center gap-0.5 py-1 px-3 rounded-xl transition-colors ${
                 active ? "text-primary" : "text-muted-foreground"
               }`}
             >
               <item.icon className="w-5 h-5" />
               <span className="text-[10px] font-medium">{item.label}</span>
+              {item.badge > 0 && (
+                <span className="absolute -top-0.5 right-1 min-w-[16px] h-4 flex items-center justify-center bg-destructive text-destructive-foreground text-[9px] font-bold rounded-full px-1">
+                  {item.badge}
+                </span>
+              )}
             </button>
           );
         })}

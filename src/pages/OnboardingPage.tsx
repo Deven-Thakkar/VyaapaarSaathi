@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, User, Store, IndianRupee } from "lucide-react";
+import { ArrowRight, User, Store, IndianRupee, Building2 } from "lucide-react";
+
+const businessTypes = [
+  { id: "retail", label: "Retail / Kirana", icon: "🏪" },
+  { id: "manufacturing", label: "Manufacturing", icon: "🏭" },
+  { id: "services", label: "Services", icon: "💼" },
+  { id: "logistics", label: "Logistics", icon: "🚛" },
+  { id: "other", label: "Other", icon: "📋" },
+];
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [business, setBusiness] = useState("");
+  const [businessType, setBusinessType] = useState<string | null>(null);
   const [income, setIncome] = useState(50000);
   const [udhaari, setUdhaari] = useState<boolean | null>(null);
 
@@ -19,7 +28,7 @@ export default function OnboardingPage() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Enter your name"
-          className="w-full bg-secondary rounded-xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
+          className="w-full bg-card rounded-xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
         />
       ),
       valid: name.length > 0,
@@ -33,10 +42,34 @@ export default function OnboardingPage() {
           value={business}
           onChange={(e) => setBusiness(e.target.value)}
           placeholder="e.g., Sharma General Store"
-          className="w-full bg-secondary rounded-xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
+          className="w-full bg-card rounded-xl px-4 py-3.5 text-sm font-medium text-foreground outline-none focus:ring-2 focus:ring-primary placeholder:text-muted-foreground/50"
         />
       ),
       valid: true,
+    },
+    {
+      icon: <Building2 className="w-6 h-6 text-primary" />,
+      title: "Business Type",
+      subtitle: "What type of MSME is your business?",
+      content: (
+        <div className="grid grid-cols-2 gap-2">
+          {businessTypes.map((bt) => (
+            <button
+              key={bt.id}
+              onClick={() => setBusinessType(bt.id)}
+              className={`flex items-center gap-2.5 p-3 rounded-xl text-sm font-semibold transition-all ${
+                businessType === bt.id
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-card text-foreground hover-blue"
+              }`}
+            >
+              <span className="text-lg">{bt.icon}</span>
+              <span className="text-xs">{bt.label}</span>
+            </button>
+          ))}
+        </div>
+      ),
+      valid: businessType !== null,
     },
     {
       icon: <IndianRupee className="w-6 h-6 text-primary" />,
@@ -73,7 +106,7 @@ export default function OnboardingPage() {
               className={`flex-1 py-4 rounded-xl text-sm font-bold transition-all ${
                 udhaari === val
                   ? "bg-primary text-primary-foreground"
-                  : "bg-secondary text-muted-foreground"
+                  : "bg-card text-muted-foreground hover-blue"
               }`}
             >
               {val ? "Yes / हाँ" : "No / नहीं"}
@@ -101,7 +134,7 @@ export default function OnboardingPage() {
           <div className="flex items-center gap-3">
             {current.icon}
             <div>
-              <h2 className="text-lg font-bold text-foreground">{current.title}</h2>
+              <h2 className="text-lg font-bold text-heading">{current.title}</h2>
               {current.subtitle && <p className="text-xs text-muted-foreground">{current.subtitle}</p>}
             </div>
           </div>
