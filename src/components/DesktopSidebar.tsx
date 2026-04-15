@@ -1,5 +1,6 @@
-import { Home, Plus, TrendingUp, Package, HandCoins } from "lucide-react";
+import { Home, Plus, TrendingUp, Package, HandCoins, ChevronLeft, ChevronRight, Receipt } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 const navItems = [
   { icon: Home, label: "Home", path: "/home" },
@@ -7,19 +8,31 @@ const navItems = [
   { icon: Plus, label: "Add Entry", path: "/add" },
   { icon: Package, label: "Inventory", path: "/inventory" },
   { icon: HandCoins, label: "Udhaari", path: "/udhaari" },
+  { icon: Receipt, label: "Transactions", path: "/transactions" },
 ];
 
 export default function DesktopSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
+  const [expanded, setExpanded] = useState(false);
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 h-screen fixed left-0 top-0 bg-card border-r border-border p-4">
-      <div className="mb-8 px-3">
-        <h1 className="text-xl font-bold text-foreground">💼 BizBuddy</h1>
-        <p className="text-xs text-muted-foreground mt-1">Your AI Business Assistant</p>
+    <aside
+      className={`hidden md:flex flex-col h-screen fixed left-0 top-0 bg-background border-r border-border transition-all duration-200 z-40 ${
+        expanded ? "w-56" : "w-16"
+      }`}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
+    >
+      <div className="flex items-center gap-2 px-4 py-5 border-b border-border">
+        <span className="text-xl">💼</span>
+        {expanded && (
+          <div className="overflow-hidden">
+            <h1 className="text-sm font-bold text-heading whitespace-nowrap">BizBuddy</h1>
+          </div>
+        )}
       </div>
-      <nav className="flex flex-col gap-1">
+      <nav className="flex flex-col gap-1 p-2 flex-1">
         {navItems.map((item) => {
           const active = location.pathname === item.path;
           return (
@@ -28,12 +41,12 @@ export default function DesktopSidebar() {
               onClick={() => navigate(item.path)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 active
-                  ? "bg-primary/10 text-primary"
-                  : "text-muted-foreground hover:bg-secondary"
+                  ? "bg-accent text-primary"
+                  : "text-muted-foreground hover-blue"
               }`}
             >
-              <item.icon className="w-5 h-5" />
-              {item.label}
+              <item.icon className="w-5 h-5 shrink-0" />
+              {expanded && <span className="whitespace-nowrap">{item.label}</span>}
             </button>
           );
         })}
