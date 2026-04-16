@@ -1,20 +1,23 @@
-import { Home, Plus, TrendingUp, Package, HandCoins, ChevronLeft, ChevronRight, Receipt } from "lucide-react";
+import { Home, Plus, TrendingUp, Package, HandCoins, Sparkles, Settings } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
-
-const navItems = [
-  { icon: Home, label: "Home", path: "/home" },
-  { icon: TrendingUp, label: "Sales", path: "/sales" },
-  { icon: Plus, label: "Add Entry", path: "/add" },
-  { icon: Package, label: "Inventory", path: "/inventory" },
-  { icon: HandCoins, label: "Udhaari", path: "/udhaari" },
-  { icon: Receipt, label: "Transactions", path: "/transactions" },
-];
+import { useTranslation } from "react-i18next";
 
 export default function DesktopSidebar() {
   const location = useLocation();
   const navigate = useNavigate();
   const [expanded, setExpanded] = useState(false);
+  const { t } = useTranslation();
+
+  const navItems = [
+    { icon: Home, label: t("nav.home"), path: "/home" },
+    { icon: TrendingUp, label: t("nav.sales"), path: "/sales" },
+    { icon: Plus, label: t("nav.add"), path: "/add" },
+    { icon: Package, label: t("nav.inventory"), path: "/inventory" },
+    { icon: HandCoins, label: t("nav.udhaar"), path: "/udhaari" },
+    { icon: Sparkles, label: t("nav.ai"), path: "/ai" },
+    { icon: Settings, label: t("nav.settings"), path: "/settings" },
+  ];
 
   return (
     <aside
@@ -25,10 +28,12 @@ export default function DesktopSidebar() {
       onMouseLeave={() => setExpanded(false)}
     >
       <div className="flex items-center gap-2 px-4 py-5 border-b border-border">
-        <span className="text-xl">💼</span>
+        <div className="w-8 h-8 rounded-lg bg-gradient-auth flex items-center justify-center shrink-0">
+          <Sparkles className="w-4 h-4 text-primary-foreground" />
+        </div>
         {expanded && (
           <div className="overflow-hidden">
-            <h1 className="text-sm font-bold text-heading whitespace-nowrap">BizBuddy</h1>
+            <h1 className="text-sm font-bold text-heading whitespace-nowrap">{t("app.name")}</h1>
           </div>
         )}
       </div>
@@ -40,9 +45,7 @@ export default function DesktopSidebar() {
               key={item.path}
               onClick={() => navigate(item.path)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                active
-                  ? "bg-accent text-primary"
-                  : "text-muted-foreground hover-blue"
+                active ? "bg-accent text-primary" : "text-muted-foreground hover-blue"
               }`}
             >
               <item.icon className="w-5 h-5 shrink-0" />
