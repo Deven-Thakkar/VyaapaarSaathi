@@ -1,20 +1,22 @@
 import { Home, Plus, TrendingUp, Package, HandCoins } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
-
-const navItems = [
-  { icon: Home, label: "Home", path: "/home", badge: 0 },
-  { icon: TrendingUp, label: "Sales", path: "/sales", badge: 0 },
-  { icon: Plus, label: "Add", path: "/add", isCenter: true, badge: 0 },
-  { icon: Package, label: "Inventory", path: "/inventory", badge: 4 },
-  { icon: HandCoins, label: "Udhaari", path: "/udhaari", badge: 5 },
-];
+import { useTranslation } from "react-i18next";
 
 export default function BottomNav() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const navItems = [
+    { icon: Home, label: t("nav.home"), path: "/home", badge: 0 },
+    { icon: TrendingUp, label: t("nav.sales"), path: "/sales", badge: 0 },
+    { icon: Plus, label: t("nav.add"), path: "/add", isCenter: true, badge: 0 },
+    { icon: Package, label: t("nav.inventory"), path: "/inventory", badge: 4 },
+    { icon: HandCoins, label: t("nav.udhaar"), path: "/udhaari", badge: 5 },
+  ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border card-shadow-md md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-background/95 backdrop-blur border-t border-border md:hidden">
       <div className="flex items-center justify-around h-[var(--nav-height)] max-w-lg mx-auto px-2">
         {navItems.map((item) => {
           const active = location.pathname === item.path;
@@ -23,7 +25,8 @@ export default function BottomNav() {
               <button
                 key={item.path}
                 onClick={() => navigate(item.path)}
-                className="flex items-center justify-center w-14 h-14 -mt-6 rounded-full bg-primary text-primary-foreground shadow-lg active:scale-95 transition-transform"
+                className="flex items-center justify-center w-14 h-14 -mt-6 rounded-full bg-gradient-auth text-primary-foreground shadow-lg active:scale-95 transition-transform"
+                aria-label={item.label}
               >
                 <item.icon className="w-7 h-7" />
               </button>

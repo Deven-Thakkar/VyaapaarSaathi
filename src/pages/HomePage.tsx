@@ -1,10 +1,10 @@
 import AppShell from "@/components/AppShell";
-import StatusBadge from "@/components/StatusBadge";
-import InsightCard from "@/components/InsightCard";
-import CashFlowChart from "@/components/CashFlowChart";
-import AiOrb from "@/components/AiOrb";
-import { Wallet, TrendingUp, TrendingDown, ArrowDownRight, Package, IndianRupee, Receipt, HandCoins } from "lucide-react";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { Wallet, TrendingUp, TrendingDown, HandCoins, Sparkles, ChevronRight, ArrowUpRight, AlertTriangle, IndianRupee } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { LineChart, Line, AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts";
 
 function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -22,163 +22,243 @@ function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string
   return <>{prefix}{display.toLocaleString("en-IN")}</>;
 }
 
-const summaryCards = [
-  { icon: Wallet, label: "Cash Balance", value: 124500, trend: "↑ 8% vs last week", trendUp: true },
-  { icon: TrendingUp, label: "Income (MTD)", value: 285000, trend: "↑ 12% growth", trendUp: true },
-  { icon: TrendingDown, label: "Expenses (MTD)", value: 161000, trend: "↓ 5% reduced", trendUp: false },
-  { icon: HandCoins, label: "Receivables", value: 23300, trend: "₹15,000 overdue", trendUp: false },
+const revenueData = [
+  { m: "Jan", v: 65000 }, { m: "Feb", v: 72000 }, { m: "Mar", v: 68000 },
+  { m: "Apr", v: 85000 }, { m: "May", v: 92000 }, { m: "Jun", v: 105000 },
+  { m: "Jul", v: 118000 },
 ];
-
-const quickActions = [
-  { label: "Collect ₹5,000", desc: "From Ramesh Kumar", icon: "💰" },
-  { label: "Restock Sugar", desc: "Only 3 left", icon: "📦" },
-  { label: "Cut expenses", desc: "₹8K savings possible", icon: "✂️" },
+const profitData = [
+  { m: "Jan", v: 12 }, { m: "Feb", v: 15 }, { m: "Mar", v: 11 },
+  { m: "Apr", v: 18 }, { m: "May", v: 22 }, { m: "Jun", v: 26 }, { m: "Jul", v: 28 },
 ];
+const expenseData = [
+  { name: "Stock", value: 45 },
+  { name: "Rent", value: 20 },
+  { name: "Salary", value: 18 },
+  { name: "Others", value: 17 },
+];
+const COLORS = ["hsl(217 91% 60%)", "hsl(142 71% 45%)", "hsl(38 92% 50%)", "hsl(215 16% 47%)"];
 
 export default function HomePage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
   return (
     <AppShell>
       <div className="max-w-6xl mx-auto p-4 lg:p-6">
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-xs text-muted-foreground font-medium">Good morning</p>
-            <h1 className="text-xl font-bold text-heading">Rahul's Store</h1>
+            <p className="text-xs text-muted-foreground font-medium">{t("home.greeting")} 👋</p>
+            <h1 className="text-xl font-bold text-heading">Rahul</h1>
           </div>
-          <StatusBadge status="warning" />
-        </div>
-
-        {/* Summary Cards - horizontal scroll mobile, grid desktop */}
-        <div className="flex gap-3 overflow-x-auto pb-2 mb-5 -mx-4 px-4 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible scrollbar-hide">
-          {summaryCards.map((card, i) => (
-            <div
-              key={card.label}
-              className="min-w-[160px] lg:min-w-0 bg-card rounded-2xl card-shadow p-4 flex-shrink-0 animate-fade-up hover-blue cursor-default"
-              style={{ animationDelay: `${i * 80}ms` }}
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher />
+            <button
+              onClick={() => navigate("/settings")}
+              className="w-9 h-9 rounded-full bg-gradient-auth flex items-center justify-center text-primary-foreground font-bold text-sm"
+              aria-label="Profile"
             >
-              <div className="flex items-center gap-2 mb-2">
-                <card.icon className="w-4 h-4 text-primary" />
-                <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{card.label}</span>
-              </div>
-              <p className="text-2xl font-extrabold text-heading">
-                <AnimatedNumber value={card.value} prefix="₹" />
-              </p>
-              <p className={`text-[10px] font-semibold mt-1 ${card.trendUp ? "text-success" : "text-destructive"}`}>
-                {card.trend}
-              </p>
-            </div>
-          ))}
+              R
+            </button>
+          </div>
         </div>
 
-        <div className="lg:grid lg:grid-cols-5 lg:gap-6">
-          {/* Left column */}
+        {/* Insights button */}
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-bold text-heading">{t("home.insights")}</h2>
+          <button className="flex items-center gap-1 text-xs font-semibold text-primary">
+            View all <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        {/* Top stat cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+          <StatCard icon={Wallet} label={t("home.dailyCash")} value={12450} trend="+8%" up />
+          <StatCard icon={TrendingUp} label={t("home.revenueTrend")} value={118000} trend="+14%" up />
+          <StatCard icon={TrendingDown} label={t("home.expenseBreakdown")} value={68000} trend="-5%" up={false} good />
+          <StatCard icon={HandCoins} label={t("home.udhaar")} value={23300} trend="₹15K overdue" up={false} />
+        </div>
+
+        <div className="lg:grid lg:grid-cols-5 lg:gap-5 space-y-5 lg:space-y-0">
+          {/* Left - charts */}
           <div className="lg:col-span-3 space-y-5">
-            {/* Cash Display */}
-            <div className="bg-card rounded-2xl card-shadow-md p-5">
-              <div className="flex items-center gap-2 mb-1">
-                <Wallet className="w-4 h-4 text-primary" />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Cash Status</span>
+            {/* Revenue chart */}
+            <Panel title={t("home.revenueTrend")} subtitle="Last 7 months">
+              <div className="h-44">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={revenueData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
+                    <defs>
+                      <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(217 91% 60%)" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="hsl(217 91% 60%)" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="m" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 1000}K`} />
+                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString("en-IN")}`} />
+                    <Area type="monotone" dataKey="v" stroke="hsl(217 91% 60%)" strokeWidth={2.5} fill="url(#revGrad)" />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
-              <p className="text-rupee-lg animate-count-up">
-                <AnimatedNumber value={124500} prefix="₹" />
+            </Panel>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Panel title={t("home.profitMargin")} subtitle="% over time">
+                <div className="h-36">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={profitData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
+                      <XAxis dataKey="m" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
+                      <Tooltip formatter={(v: number) => `${v}%`} />
+                      <Line type="monotone" dataKey="v" stroke="hsl(142 71% 45%)" strokeWidth={2.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+                <p className="text-[11px] text-success font-semibold mt-1">✅ 28% margin this month</p>
+              </Panel>
+
+              <Panel title={t("home.expenseBreakdown")} subtitle="By category">
+                <div className="h-36 flex items-center">
+                  <ResponsiveContainer width="60%" height="100%">
+                    <PieChart>
+                      <Pie data={expenseData} dataKey="value" innerRadius={28} outerRadius={50} paddingAngle={2}>
+                        {expenseData.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <ul className="flex-1 space-y-1.5 text-[10px]">
+                    {expenseData.map((d, i) => (
+                      <li key={d.name} className="flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full" style={{ background: COLORS[i] }} />
+                        <span className="text-muted-foreground">{d.name}</span>
+                        <span className="ml-auto font-semibold text-foreground">{d.value}%</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </Panel>
+            </div>
+
+            {/* Investment + risk */}
+            <div className="grid grid-cols-2 gap-4">
+              <Panel title={t("home.investmentReq")}>
+                <p className="text-2xl font-extrabold text-heading"><AnimatedNumber value={75000} prefix="₹" /></p>
+                <p className="text-[11px] text-muted-foreground mt-1">For Q4 expansion</p>
+              </Panel>
+              <Panel title={t("home.predictedReturns")}>
+                <p className="text-2xl font-extrabold text-success">+₹<AnimatedNumber value={28000} /></p>
+                <p className="text-[11px] text-success font-semibold mt-1 flex items-center gap-1">
+                  <ArrowUpRight className="w-3 h-3" /> 37% ROI predicted
+                </p>
+              </Panel>
+            </div>
+
+            {/* AI suggestion */}
+            <div className="rounded-2xl p-4 bg-gradient-auth text-primary-foreground card-shadow-md">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-[11px] font-bold uppercase tracking-wide">{t("home.aiSuggestion")}</span>
+              </div>
+              <p className="text-sm font-semibold leading-snug">
+                "Restock sugar & cooking oil before the weekend — demand is up 22%."
               </p>
-              <div className="flex items-center gap-6 mt-3">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Days left</p>
-                  <p className="text-lg font-bold text-warning">12 days</p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Risk Score</p>
-                  <p className="text-lg font-bold text-heading">6.2/10</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Cash Flow Chart */}
-            <CashFlowChart />
-
-            {/* Bolna AI Orb */}
-            <div className="flex flex-col items-center py-6">
-              <AiOrb />
-              <div className="flex flex-wrap gap-2 mt-6 justify-center">
-                {["Aaj ki sales kitni hai?", "Kitna stock bacha hai?", "Mera cash safe hai?"].map((q) => (
-                  <span key={q} className="text-[10px] bg-accent text-accent-foreground px-3 py-1.5 rounded-full font-medium cursor-pointer hover-blue">
-                    "{q}"
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* AI Insights */}
-            <div className="space-y-2">
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">AI Insights</h2>
-              <InsightCard icon="💰" text="₹15,000 stuck in udhaari from 3 customers" action="Send reminders" variant="warning" />
-              <InsightCard icon="📦" text="12 items running low on stock" action="View & restock" variant="critical" />
-              <InsightCard icon="🎉" text="Diwali in 3 weeks — increase stock of sweets & gifting items" action="See suggestions" variant="info" />
+              <button
+                onClick={() => navigate("/ai")}
+                className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-foreground/15 backdrop-blur rounded-full text-xs font-semibold hover:bg-primary-foreground/25 transition"
+              >
+                {t("home.askAi")} <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* Right column */}
-          <div className="lg:col-span-2 space-y-4 mt-5 lg:mt-0">
-            {/* Today's Actions */}
-            <div className="bg-card rounded-2xl card-shadow p-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">⚡ Today's Actions</h3>
-              <div className="space-y-2">
-                {quickActions.map((a) => (
-                  <button key={a.label} className="w-full flex items-center gap-3 p-3 rounded-xl bg-background hover-blue text-left transition-colors active:scale-[0.98]">
-                    <span className="text-xl">{a.icon}</span>
-                    <div className="flex-1">
-                      <p className="text-sm font-semibold text-foreground">{a.label}</p>
-                      <p className="text-[10px] text-muted-foreground">{a.desc}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Inventory Snapshot */}
-            <div className="bg-card rounded-2xl card-shadow p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Package className="w-4 h-4 text-primary" />
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Inventory Snapshot</h3>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-warning/10 rounded-xl p-3">
-                  <p className="text-lg font-bold text-warning">12</p>
-                  <p className="text-[10px] text-muted-foreground">Low stock items</p>
+          {/* Right - chatbot preview, risk, udhaar */}
+          <div className="lg:col-span-2 space-y-4">
+            <button
+              onClick={() => navigate("/ai")}
+              className="w-full bg-card rounded-2xl card-shadow p-4 text-left lift transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-auth flex items-center justify-center animate-glow-pulse">
+                  <Sparkles className="w-5 h-5 text-primary-foreground" />
                 </div>
-                <div className="bg-destructive/10 rounded-xl p-3">
-                  <p className="text-lg font-bold text-destructive">3</p>
-                  <p className="text-[10px] text-muted-foreground">Out of stock</p>
+                <div className="flex-1">
+                  <p className="text-sm font-bold text-heading">{t("ai.title")}</p>
+                  <p className="text-[11px] text-muted-foreground">{t("home.chatPreview")}</p>
                 </div>
+                <ChevronRight className="w-4 h-4 text-muted-foreground" />
               </div>
-            </div>
+            </button>
 
-            {/* Today's Snapshot */}
-            <div className="bg-card rounded-2xl card-shadow p-4">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Today's Snapshot</h3>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Sales", value: "₹8,450", trend: "+12%" },
-                  { label: "Expenses", value: "₹3,200", trend: "-5%" },
-                  { label: "New Credit", value: "₹2,100", trend: "" },
-                  { label: "Collected", value: "₹5,000", trend: "+8%" },
-                ].map((item) => (
-                  <div key={item.label} className="bg-background rounded-xl p-3">
-                    <p className="text-[10px] text-muted-foreground">{item.label}</p>
-                    <p className="text-lg font-bold text-heading">{item.value}</p>
-                    {item.trend && (
-                      <span className={`text-[10px] font-semibold ${item.trend.startsWith("+") ? "text-success" : "text-destructive"}`}>
-                        {item.trend}
-                      </span>
-                    )}
-                  </div>
-                ))}
+            <Panel title={t("home.riskScore")}>
+              <div className="flex items-baseline gap-2">
+                <p className="text-3xl font-extrabold text-warning">6.2</p>
+                <p className="text-xs text-muted-foreground">/ 10</p>
               </div>
-            </div>
+              <div className="w-full bg-muted rounded-full h-2 mt-2">
+                <div className="bg-warning h-2 rounded-full" style={{ width: "62%" }} />
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3 text-warning" /> Watch udhaar collection
+              </p>
+            </Panel>
+
+            <button
+              onClick={() => navigate("/udhaari")}
+              className="w-full bg-card rounded-2xl card-shadow p-4 text-left lift transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <HandCoins className="w-4 h-4 text-warning" />
+                <span className="text-[11px] font-semibold uppercase text-muted-foreground tracking-wide">{t("home.udhaar")}</span>
+              </div>
+              <p className="text-2xl font-extrabold text-heading"><AnimatedNumber value={23300} prefix="₹" /></p>
+              <p className="text-[11px] text-destructive font-semibold mt-1">3 customers overdue</p>
+            </button>
+
+            <button
+              onClick={() => navigate("/sales")}
+              className="w-full bg-card rounded-2xl card-shadow p-4 text-left lift transition-all"
+            >
+              <div className="flex items-center gap-2 mb-1.5">
+                <IndianRupee className="w-4 h-4 text-primary" />
+                <span className="text-[11px] font-semibold uppercase text-muted-foreground tracking-wide">{t("home.dailyCash")}</span>
+              </div>
+              <p className="text-2xl font-extrabold text-heading"><AnimatedNumber value={12450} prefix="₹" /></p>
+              <p className="text-[11px] text-success font-semibold mt-1">+18% vs yesterday</p>
+            </button>
           </div>
         </div>
       </div>
     </AppShell>
+  );
+}
+
+function StatCard({
+  icon: Icon, label, value, trend, up, good,
+}: { icon: any; label: string; value: number; trend: string; up: boolean; good?: boolean }) {
+  const trendColor = good || up ? "text-success" : "text-destructive";
+  return (
+    <div className="bg-card rounded-2xl card-shadow p-4 animate-fade-up">
+      <div className="flex items-center gap-2 mb-1.5">
+        <Icon className="w-4 h-4 text-primary" />
+        <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide truncate">{label}</span>
+      </div>
+      <p className="text-xl font-extrabold text-heading">
+        <AnimatedNumber value={value} prefix="₹" />
+      </p>
+      <p className={`text-[10px] font-semibold mt-1 ${trendColor}`}>{trend}</p>
+    </div>
+  );
+}
+
+function Panel({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
+  return (
+    <div className="bg-card rounded-2xl card-shadow p-4">
+      <div className="flex items-baseline justify-between mb-2">
+        <h3 className="text-xs font-bold text-heading uppercase tracking-wide">{title}</h3>
+        {subtitle && <span className="text-[10px] text-muted-foreground">{subtitle}</span>}
+      </div>
+      {children}
+    </div>
   );
 }

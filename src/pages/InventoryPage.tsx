@@ -1,8 +1,8 @@
 import AppShell from "@/components/AppShell";
-import StatusBadge from "@/components/StatusBadge";
-import { Package, AlertTriangle, XCircle, ChevronRight, Search } from "lucide-react";
+import { Search, ChevronRight, Package, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const products = [
   { id: 1, name: "Basmati Rice 5kg", stock: 45, price: 300, status: "safe" as const },
@@ -12,148 +12,109 @@ const products = [
   { id: 5, name: "Amul Butter 500g", stock: 22, price: 275, status: "safe" as const },
   { id: 6, name: "Maggi Noodles", stock: 6, price: 14, status: "warning" as const },
   { id: 7, name: "Parle-G Biscuit", stock: 50, price: 10, status: "safe" as const },
-  { id: 8, name: "Surf Excel 1kg", stock: 15, price: 220, status: "safe" as const },
 ];
 
-const statusIcon = {
-  safe: "✅",
-  warning: "⚠️",
-  critical: "❌",
-};
-
-const statusText = {
-  safe: "In Stock",
-  warning: "Low Stock",
-  critical: "Very Low",
-};
+const recentTx = [
+  { id: 1, name: "Basmati Rice 5kg", change: -2, time: "2:45 PM" },
+  { id: 2, name: "Sugar 1kg", change: +20, time: "1:00 PM" },
+  { id: 3, name: "Maggi Noodles", change: -5, time: "10:15 AM" },
+];
 
 export default function InventoryPage() {
   const [search, setSearch] = useState("");
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selected, setSelected] = useState<number[]>([]);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const isSelecting = selected.length > 0;
+  const toggle = (id: number) =>
+    setSelected((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
 
-  const toggleSelect = (id: number) => {
-    setSelectedIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+  const statusMap = {
+    safe: { icon: "✅", text: t("inventory.inStock"), cls: "bg-success/10 text-success" },
+    warning: { icon: "⚠️", text: t("inventory.low"), cls: "bg-warning/10 text-warning" },
+    critical: { icon: "❌", text: t("inventory.critical"), cls: "bg-destructive/10 text-destructive" },
   };
-
-  const isSelecting = selectedIds.length > 0;
 
   return (
     <AppShell>
-      <div className="max-w-5xl mx-auto p-4 lg:p-6">
-        {/* Selection Bar */}
+      <div className="max-w-3xl mx-auto p-4 lg:p-6">
         {isSelecting && (
-          <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between lg:ml-64">
-            <span className="text-sm font-semibold">{selectedIds.length} selected</span>
+          <div className="fixed top-0 left-0 right-0 z-50 bg-primary text-primary-foreground px-4 py-3 flex items-center justify-between md:ml-16">
+            <span className="text-sm font-semibold">{selected.length} selected</span>
             <div className="flex gap-2">
               <button className="px-3 py-1.5 bg-primary-foreground/20 rounded-lg text-xs font-semibold">Restock</button>
               <button className="px-3 py-1.5 bg-primary-foreground/20 rounded-lg text-xs font-semibold">Update Price</button>
               <button className="px-3 py-1.5 bg-destructive rounded-lg text-xs font-semibold">Delete</button>
-              <button onClick={() => setSelectedIds([])} className="px-3 py-1.5 text-xs font-semibold">Cancel</button>
+              <button onClick={() => setSelected([])} className="px-3 py-1.5 text-xs">Cancel</button>
             </div>
           </div>
         )}
 
-        <h1 className="text-xl font-bold text-heading mb-1">Inventory</h1>
-        <p className="text-sm text-muted-foreground mb-5">Manage your stock</p>
+        <h1 className="text-xl font-bold text-heading mb-1">{t("inventory.title")}</h1>
+        <p className="text-sm text-muted-foreground mb-5">{t("inventory.products")}</p>
 
-        <div className="lg:grid lg:grid-cols-3 lg:gap-6">
-          {/* Overview Cards */}
-          <div className="lg:col-span-1 space-y-3 mb-5 lg:mb-0">
-            <div className="bg-card rounded-2xl card-shadow-md p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Package className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Inventory Health</span>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-[10px] text-muted-foreground">Total Stock Value</p>
-                  <p className="text-2xl font-extrabold text-foreground">₹2,45,000</p>
+        {/* Search */}
+        <div className="flex items-center gap-2 bg-card rounded-xl card-shadow px-3 py-2.5 mb-4">
+          <Search className="w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search products..."
+            className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
+          />
+        </div>
+
+        {/* Product cards */}
+        <div className="space-y-2 mb-6">
+          {filtered.map((p) => {
+            const s = statusMap[p.status];
+            return (
+              <button
+                key={p.id}
+                onClick={() => (isSelecting ? toggle(p.id) : navigate(`/inventory/${p.id}`))}
+                onContextMenu={(e) => { e.preventDefault(); toggle(p.id); }}
+                className={`w-full flex items-center gap-3 bg-card rounded-xl card-shadow p-4 text-left active:scale-[0.99] transition-all ${
+                  selected.includes(p.id) ? "ring-2 ring-primary" : ""
+                }`}
+              >
+                <div className="w-10 h-10 rounded-xl bg-accent text-primary flex items-center justify-center shrink-0">
+                  <Package className="w-5 h-5" />
                 </div>
-                <div className="flex gap-3">
-                  <div className="flex-1 bg-warning/10 rounded-xl p-2.5">
-                    <p className="text-lg font-bold text-warning">4</p>
-                    <p className="text-[10px] text-muted-foreground">Low Stock</p>
-                  </div>
-                  <div className="flex-1 bg-destructive/10 rounded-xl p-2.5">
-                    <p className="text-lg font-bold text-destructive">2</p>
-                    <p className="text-[10px] text-muted-foreground">Critical</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
+                  <div className="flex items-center gap-3 mt-0.5">
+                    <span className="text-xs text-muted-foreground">{t("inventory.stock")}: <span className="font-bold text-foreground">{p.stock}</span></span>
+                    <span className="text-xs text-muted-foreground">₹{p.price}</span>
                   </div>
                 </div>
+                <span className={`text-[10px] font-semibold px-2 py-1 rounded-full shrink-0 ${s.cls}`}>
+                  {s.icon} {s.text}
+                </span>
+                <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Recent transactions */}
+        <h2 className="text-sm font-bold text-heading mb-3">{t("inventory.recent")}</h2>
+        <div className="space-y-2">
+          {recentTx.map((tx) => (
+            <div key={tx.id} className="flex items-center gap-3 bg-card rounded-xl card-shadow p-3.5">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center ${tx.change > 0 ? "bg-success/10 text-success" : "bg-destructive/10 text-destructive"}`}>
+                {tx.change > 0 ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
               </div>
-            </div>
-
-            <div className="bg-card rounded-2xl card-shadow p-4 space-y-2">
-              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Smart Insights</h3>
-              <div className="flex items-center gap-2 bg-warning/5 rounded-xl p-3">
-                <AlertTriangle className="w-4 h-4 text-warning shrink-0" />
-                <p className="text-xs text-foreground">12 items need restock this week</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground truncate">{tx.name}</p>
+                <p className="text-[11px] text-muted-foreground">{tx.time}</p>
               </div>
-              <div className="flex items-center gap-2 bg-destructive/5 rounded-xl p-3">
-                <XCircle className="w-4 h-4 text-destructive shrink-0" />
-                <p className="text-xs text-foreground">3 dead stock items — consider discounting</p>
-              </div>
+              <p className={`text-sm font-bold ${tx.change > 0 ? "text-success" : "text-destructive"}`}>
+                {tx.change > 0 ? "+" : ""}{tx.change}
+              </p>
             </div>
-          </div>
-
-          {/* Product List */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-2 bg-card rounded-xl card-shadow px-3 py-2.5 mb-4">
-              <Search className="w-4 h-4 text-muted-foreground" />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search products..."
-                className="flex-1 bg-transparent outline-none text-sm text-foreground placeholder:text-muted-foreground/50"
-              />
-            </div>
-
-            <p className="text-[10px] text-muted-foreground mb-2 px-1">Long press to select multiple items</p>
-
-            <div className="space-y-2">
-              {filtered.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => isSelecting ? toggleSelect(p.id) : navigate(`/inventory/${p.id}`)}
-                  onContextMenu={(e) => { e.preventDefault(); toggleSelect(p.id); }}
-                  className={`w-full flex items-center gap-3 bg-card rounded-xl card-shadow p-4 text-left active:scale-[0.99] transition-all ${
-                    selectedIds.includes(p.id) ? "ring-2 ring-primary" : ""
-                  }`}
-                >
-                  {isSelecting && (
-                    <div className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 ${
-                      selectedIds.includes(p.id) ? "bg-primary border-primary text-primary-foreground" : "border-border"
-                    }`}>
-                      {selectedIds.includes(p.id) && <span className="text-xs">✓</span>}
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-foreground truncate">{p.name}</p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-xs text-muted-foreground">Stock: <span className="font-bold text-foreground">{p.stock}</span></span>
-                      <span className="text-xs text-muted-foreground">₹{p.price}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-[10px] font-semibold px-2 py-1 rounded-full ${
-                      p.status === "safe" ? "bg-success/10 text-success" :
-                      p.status === "warning" ? "bg-warning/10 text-warning" :
-                      "bg-destructive/10 text-destructive"
-                    }`}>
-                      {statusIcon[p.status]} {statusText[p.status]}
-                    </span>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground" />
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
     </AppShell>
