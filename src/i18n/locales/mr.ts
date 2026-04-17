@@ -70,6 +70,11 @@ const mr: Translation = {
     vsYesterday: "कालच्या तुलनेत",
     customersOverdue: "{{count}} थकित",
     watchUdhaar: "उधार वसुलीवर लक्ष ठेवा",
+    lowStock: "कमी साठा वस्तू",
+    lowStockSub: "मर्यादेखाली चालू आहे",
+    outOfStock: "साठा संपला",
+    outOfStockSub: "त्वरित पुनर्भरण आवश्यक",
+    items: "वस्तू",
   },
   add: {
     title: "नोंद जोडा",

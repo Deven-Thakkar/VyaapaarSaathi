@@ -1,4 +1,4 @@
-import { Home, BarChart3, Sparkles, TrendingUp, Package, HandCoins, Settings, X } from "lucide-react";
+import { Home, BarChart3, Sparkles, TrendingUp, Package, HandCoins, Settings, X, Plus } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
@@ -13,6 +13,7 @@ export default function SidebarDrawer({ open, onClose }: { open: boolean; onClos
     { icon: BarChart3, label: t("nav.insights"), path: "/insights" },
     { icon: Sparkles, label: t("nav.ai"), path: "/ai" },
     { icon: TrendingUp, label: t("nav.sales"), path: "/sales" },
+    { icon: Plus, label: t("nav.add"), path: "/add", highlight: true },
     { icon: Package, label: t("nav.inventory"), path: "/inventory" },
     { icon: HandCoins, label: t("nav.udhaar"), path: "/udhaari" },
     { icon: Settings, label: t("nav.settings"), path: "/settings" },
@@ -74,6 +75,7 @@ export default function SidebarDrawer({ open, onClose }: { open: boolean; onClos
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {items.map((item) => {
             const active = location.pathname === item.path;
+            const isHighlight = (item as any).highlight;
             return (
               <button
                 key={item.path}
@@ -84,7 +86,15 @@ export default function SidebarDrawer({ open, onClose }: { open: boolean; onClos
                     : "text-foreground hover:bg-accent hover:text-primary"
                 }`}
               >
-                <item.icon className="w-5 h-5 shrink-0" />
+                <span
+                  className={`flex items-center justify-center shrink-0 ${
+                    isHighlight && !active
+                      ? "w-7 h-7 rounded-full bg-primary text-primary-foreground"
+                      : "w-5 h-5"
+                  }`}
+                >
+                  <item.icon className={isHighlight && !active ? "w-4 h-4" : "w-5 h-5"} strokeWidth={isHighlight ? 3 : 2} />
+                </span>
                 <span>{item.label}</span>
               </button>
             );

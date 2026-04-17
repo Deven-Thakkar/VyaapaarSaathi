@@ -70,6 +70,11 @@ const hi: Translation = {
     vsYesterday: "कल से",
     customersOverdue: "{{count}} देरी",
     watchUdhaar: "उधार वसूली पर ध्यान दें",
+    lowStock: "कम स्टॉक वस्तुएं",
+    lowStockSub: "सीमा से नीचे चल रहा है",
+    outOfStock: "स्टॉक खत्म",
+    outOfStockSub: "तुरंत रीस्टॉक करें",
+    items: "वस्तुएं",
   },
   add: {
     title: "एंट्री जोड़ें",

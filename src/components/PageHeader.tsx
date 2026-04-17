@@ -1,5 +1,7 @@
 import { ReactNode, useState } from "react";
 import { Menu } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useProfile } from "@/context/ProfileContext";
 import LanguageSwitcher from "./LanguageSwitcher";
 import SidebarDrawer from "./SidebarDrawer";
 
@@ -8,13 +10,18 @@ export default function PageHeader({
   subtitle,
   right,
   showLang = true,
+  showProfile = true,
 }: {
   title: string;
   subtitle?: string;
   right?: ReactNode;
   showLang?: boolean;
+  showProfile?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const { profile } = useProfile();
+  const initial = (profile.name?.trim()?.[0] || "U").toUpperCase();
 
   return (
     <>
@@ -42,6 +49,15 @@ export default function PageHeader({
               </div>
             )}
             {right}
+            {showProfile && (
+              <button
+                onClick={() => navigate("/settings")}
+                aria-label="Profile / Settings"
+                className="w-9 h-9 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-bold text-sm shadow-sm hover:bg-accent/80 transition-colors"
+              >
+                {initial}
+              </button>
+            )}
           </div>
         </div>
       </header>
