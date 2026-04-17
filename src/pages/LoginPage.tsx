@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Phone, ArrowRight, Sparkles, User, Building2, IndianRupee, Target, TrendingUp, Package, Users, Home as HomeIcon, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -6,6 +6,7 @@ import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabase";
 import { createCustomer } from "@/lib/customer-api";
+import { getBusinessByPhone } from "@/lib/business-api";
 
 type Tab = "login" | "signup";
 
@@ -14,11 +15,10 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { updateProfile } = useProfile();
   const [tab, setTab] = useState<Tab>("login");
+  const [errorMsg, setErrorMsg] = useState("");
 
   // login state
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [isLoading, setIsLoading] = useState(false);
 
   // signup state
@@ -42,18 +42,69 @@ export default function LoginPage() {
     { v: "others", l: t("auth.bizTypes.others") },
   ];
 
+  const handleLoginWithPhone = async () => {
+    try {
+      setErrorMsg("");
+      setIsLoading(true);
+
+      if (phone.length < 10) {
+        setErrorMsg("Please enter a valid 10-digit phone number");
+        return;
+      }
+
+      // Fetch business by phone number
+      const business = await getBusinessByPhone(phone);
+
+      if (!business) {
+        setErrorMsg("No account found with this phone number. Please sign up first.");
+        return;
+      }
+
+      // Update profile with business data
+      updateProfile({
+        name: business.owner_name,
+        phone: business.phone_number,
+        businessId: business.id,
+        businessName: business.shop_name,
+        businessType: business.business_type,
+        monthlyRevenue: business.monthly_revenue,
+        investment: business.investment_amount,
+        stock: business.cost_stock,
+        salaries: business.cost_salaries,
+        rent: business.cost_rent,
+        utilities: business.cost_utilities,
+      });
+
+      navigate("/home");
+    } catch (error) {
+      console.error("Login error:", error);
+      setErrorMsg("Failed to login. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSignup = async () => {
     try {
+      setErrorMsg("");
       setIsLoading(true);
+
+      if (!name || !bizType || !revenue) {
+        alert("Please fill all required fields");
+        return;
+      }
+
+      // Format phone consistently
+      const phoneForStorage = signupPhone ? `+91${signupPhone}` : null;
 
       // Insert into Supabase table public.businesses
       const { data: businessData, error: businessError } = await supabase
         .from("businesses")
         .insert([
           {
-            owner_name: name || "Rahul Sharma",
-            phone_number: signupPhone ? "+91 " + signupPhone : null,
-            shop_name: `${name || "Rahul"}'s Shop`,
+            owner_name: name,
+            phone_number: phoneForStorage,
+            shop_name: `${name}'s Shop`,
             business_type: bizType,
             monthly_revenue: Number(revenue) || 0,
             investment_amount: Number(investment) || 0,
@@ -68,7 +119,7 @@ export default function LoginPage() {
 
       if (businessError) {
         console.error("Signup error:", businessError);
-        alert("Failed to create account. Please try again.");
+        setErrorMsg("Failed to create account. Please try again.");
         return;
       }
 
@@ -78,20 +129,20 @@ export default function LoginPage() {
       try {
         await createCustomer({
           business_id: businessId,
-          name: name || "Rahul Sharma",
-          phone_number: signupPhone ? "+91" + signupPhone : undefined,
+          name: name,
+          phone_number: phoneForStorage || undefined,
           total_outstanding: 0,
         });
       } catch (customerError) {
         console.error("Warning: Failed to create initial customer:", customerError);
-        // Don't block signup if customer creation fails, but log it
       }
 
       // Update local profile state
       updateProfile({
-        name: name || "Rahul Sharma",
-        ...(signupPhone ? { phone: "+91 " + signupPhone } : {}),
+        name: name,
+        phone: phoneForStorage || "",
         businessId: businessId,
+        businessName: `${name}'s Shop`,
         businessType: bizType,
         monthlyRevenue: Number(revenue) || 0,
         investment: Number(investment) || 0,
@@ -102,6 +153,9 @@ export default function LoginPage() {
       });
 
       navigate("/home");
+    } catch (error) {
+      console.error("Signup error:", error);
+      setErrorMsg("Failed to complete signup. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -140,66 +194,26 @@ export default function LoginPage() {
 
           {tab === "login" ? (
             <div className="space-y-4">
-              {step === "phone" ? (
-                <>
-                  <Field icon={<Phone className="w-4 h-4" />} label={t("auth.phone")}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-muted-foreground">+91</span>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                        placeholder={t("auth.phonePh")}
-                        className="flex-1 bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
-                      />
-                    </div>
-                  </Field>
-                  <PrimaryBtn onClick={() => setStep("otp")} disabled={phone.length < 10}>
-                    {t("auth.getOtp")} <ArrowRight className="w-4 h-4" />
-                  </PrimaryBtn>
-                </>
-              ) : (
-                <>
-                  <label className="text-xs font-semibold text-muted-foreground block">{t("auth.otp")}</label>
-                  <div className="flex gap-2 justify-center">
-                    {[0, 1, 2, 3].map((i) => (
-                      <input
-                        key={i}
-                        type="tel"
-                        maxLength={1}
-                        value={otp[i] || ""}
-                        onChange={(e) => {
-                          const val = e.target.value.replace(/\D/g, "");
-                          const arr = otp.split("");
-                          arr[i] = val;
-                          setOtp(arr.join(""));
-                          if (val && e.target.nextElementSibling) {
-                            (e.target.nextElementSibling as HTMLInputElement).focus();
-                          }
-                        }}
-                        className="w-12 h-14 text-center text-xl font-bold bg-muted rounded-xl outline-none focus:ring-2 focus:ring-primary text-foreground"
-                      />
-                    ))}
-                  </div>
-                  <PrimaryBtn onClick={() => navigate("/home")} disabled={otp.length < 4}>
-                    {t("auth.loginOtp")} <ArrowRight className="w-4 h-4" />
-                  </PrimaryBtn>
-                  <button onClick={() => setStep("phone")} className="w-full text-xs text-muted-foreground">
-                    {t("auth.changeNumber")}
-                  </button>
-                </>
-              )}
+              {errorMsg && <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-lg">{errorMsg}</div>}
+              <Field icon={<Phone className="w-4 h-4" />} label={t("auth.phone")}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">+91</span>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder={t("auth.phonePh")}
+                    className="flex-1 bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                  />
+                </div>
+              </Field>
+              <PrimaryBtn onClick={handleLoginWithPhone} disabled={phone.length < 10 || isLoading}>
+                {isLoading ? "Logging in..." : <>{t("auth.cont")} <ArrowRight className="w-4 h-4" /></>}
+              </PrimaryBtn>
             </div>
           ) : (
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 scrollbar-hide">
-              <Field icon={<User className="w-4 h-4" />} label={t("auth.name")}>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("auth.namePh")}
-                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
-                />
-              </Field>
+              {errorMsg && <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-lg">{errorMsg}</div>}
               <Field icon={<Phone className="w-4 h-4" />} label={t("auth.phone")}>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-muted-foreground">+91</span>
@@ -211,6 +225,14 @@ export default function LoginPage() {
                     className="flex-1 bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
                   />
                 </div>
+              </Field>
+              <Field icon={<User className="w-4 h-4" />} label={t("auth.name")}>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("auth.namePh")}
+                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                />
               </Field>
               <Field icon={<Building2 className="w-4 h-4" />} label={t("auth.businessType")}>
                 <select
@@ -258,7 +280,7 @@ export default function LoginPage() {
                 <NumInput value={utilities} setValue={setUtilities} placeholder={t("auth.utilitiesPh")} />
               </Field>
 
-              <PrimaryBtn onClick={handleSignup} disabled={isLoading || !name || !bizType || !revenue}>
+              <PrimaryBtn onClick={handleSignup} disabled={isLoading || !name || !bizType || !revenue || signupPhone.length < 10}>
                 {isLoading ? "Signing up..." : <>{t("auth.cont")} <ArrowRight className="w-4 h-4" /></>}
               </PrimaryBtn>
             </div>

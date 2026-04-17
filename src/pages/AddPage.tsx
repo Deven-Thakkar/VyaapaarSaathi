@@ -91,6 +91,10 @@ export default function AddPage() {
                     navigate("/add/voice");
                   } else if (m.key === "scan") {
                     navigate("/add/scan");
+                  } else if (m.key === "manual" && category === "inventory") {
+                    navigate("/inventory/manual-entry");
+                  } else if (m.key === "manual" && category === "sales") {
+                    navigate("/add/sales/manual");
                   } else {
                     // Placeholder for other methods
                     console.log(`${m.key} clicked`);
