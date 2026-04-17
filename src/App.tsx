@@ -10,6 +10,7 @@ import AddPage from "./pages/AddPage";
 import VoiceEntryPage from "./pages/VoiceEntryPage";
 import ScanBillPage from "./pages/ScanBillPage";
 import ScanBillForInventoryPage from "./pages/ScanBillForInventoryPage";
+import ScanBillForSalesPage from "./pages/ScanBillForSalesPage";
 import SalesPage from "./pages/SalesPage";
 import AddManualSalesPage from "./pages/AddManualSalesPage";
 import InventoryPage from "./pages/InventoryPage";
@@ -44,6 +45,7 @@ const App = () => (
             <Route path="/add/scan" element={<ScanBillPage />} />
             <Route path="/add/sales/manual" element={<AddManualSalesPage />} />
             <Route path="/sales" element={<SalesPage />} />
+            <Route path="/sales/scan" element={<ScanBillForSalesPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/inventory/add" element={<AddProductPage />} />
             <Route path="/inventory/manual-entry" element={<AddManualStockPage />} />

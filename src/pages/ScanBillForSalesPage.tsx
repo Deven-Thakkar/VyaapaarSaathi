@@ -2,9 +2,8 @@ import { useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/context/ProfileContext";
-import { createProduct } from "@/lib/products-api";
-import { ArrowLeft, AlertCircle, Check, X, Upload, Loader2, Eye, Package } from "lucide-react";
-
+import { supabase } from "@/lib/supabase";
+import { ArrowLeft, AlertCircle, Check, Upload, Loader2, Eye, Package } from "lucide-react";
 
 interface ExtractedItem {
   productName: string;
@@ -20,7 +19,7 @@ interface InvoiceData {
   products: ExtractedItem[];
 }
 
-export default function ScanBillForInventoryPage() {
+export default function ScanBillForSalesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile } = useProfile();
@@ -52,8 +51,6 @@ export default function ScanBillForInventoryPage() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-
 
   // Handle file upload - send to backend API
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,10 +100,10 @@ export default function ScanBillForInventoryPage() {
     }
   };
 
-  // Confirm and add items to inventory
+  // Confirm and add to sales
   const handleConfirm = async () => {
-    if (extractedItems.length === 0) {
-      alert("No items to add. Please try scanning again.");
+    if (!invoiceData || extractedItems.length === 0) {
+      alert("No invoice data. Please try scanning again.");
       return;
     }
 
@@ -114,34 +111,39 @@ export default function ScanBillForInventoryPage() {
     setStep("processing");
 
     try {
-      for (const item of extractedItems) {
-        // Add product with invoice metadata in notes
-        await createProduct({
-          business_id: profile.businessId!,
-          name: item.productName,
-          stock: item.quantity,
-          price: item.price,
-          // Optional: add invoice details if your database supports custom fields
-          // invoice_number: invoiceData?.invoice_number,
-          // vendor: invoiceData?.vendor,
-          // invoice_date: invoiceData?.order_date,
-        });
+      // Create a sale record in Supabase
+      const { data: saleData, error: saleError } = await supabase
+        .from("sales")
+        .insert({
+          business_id: profile.businessId,
+          total_amount: invoiceData.amount,
+          Vendor: invoiceData.vendor,
+          Date: invoiceData.order_date,
+          created_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (saleError) {
+        throw new Error("Failed to create sale: " + saleError.message);
       }
 
-      // Log invoice details (for reference/audit trail)
-      console.log("Products added from invoice:", {
-        vendor: invoiceData?.vendor,
-        invoice_number: invoiceData?.invoice_number,
-        order_date: invoiceData?.order_date,
-        total_amount: invoiceData?.amount,
-        products_count: extractedItems.length,
+      // Note: We're storing the invoice metadata and extracted products for reference
+      console.log("✅ Sale created successfully:", {
+        saleId: saleData.id,
+        vendor: invoiceData.vendor,
+        invoiceNumber: invoiceData.invoice_number,
+        invoiceDate: invoiceData.order_date,
+        totalAmount: invoiceData.amount,
+        itemsCount: extractedItems.length,
+        items: extractedItems,
       });
 
-      alert(`✅ Successfully added ${extractedItems.length} products to inventory from ${invoiceData?.vendor}`);
-      navigate("/inventory");
+      alert(`✅ Successfully added sale from ${invoiceData.vendor} with ${extractedItems.length} products for ₹${invoiceData.amount}!`);
+      navigate("/sales");
     } catch (error) {
-      console.error("Failed to add products:", error);
-      alert("Failed to add products. Please try again.");
+      console.error("Failed to add sale:", error);
+      alert("Failed to add sale. Please try again.");
       setStep("extract");
     } finally {
       setIsSubmitting(false);
@@ -155,7 +157,7 @@ export default function ScanBillForInventoryPage() {
         <div className="flex items-center gap-3 mb-6 mt-4">
           <button
             onClick={() => {
-              if (step === "upload") navigate("/inventory");
+              if (step === "upload") navigate("/sales");
               else setStep("upload");
             }}
             className="p-2 hover:bg-card rounded-lg transition-colors"
@@ -164,12 +166,12 @@ export default function ScanBillForInventoryPage() {
           </button>
           <div>
             <h1 className="text-xl font-bold text-foreground">
-              {t("inventory.scanBill") || "Scan Bill"}
+              {t("sales.scanBill") || "Scan Bill"}
             </h1>
             <p className="text-xs text-muted-foreground">
-              {step === "upload" && "Upload bill image or PDF"}
-              {step === "extract" && "Review extracted products"}
-              {step === "processing" && "Adding products..."}
+              {step === "upload" && "Upload bill image or PDF to record sale"}
+              {step === "extract" && "Review extracted sale details"}
+              {step === "processing" && "Adding sale..."}
             </p>
           </div>
         </div>
@@ -183,7 +185,7 @@ export default function ScanBillForInventoryPage() {
               </div>
               <h2 className="text-lg font-bold text-foreground mb-2">Upload Bill Image or PDF</h2>
               <p className="text-sm text-muted-foreground mb-6">
-                Take a photo or upload a PDF/image of the bill to extract product information
+                Take a photo or upload a PDF/image of the bill to record the sale
               </p>
             </div>
 
@@ -210,14 +212,14 @@ export default function ScanBillForInventoryPage() {
           <div className="space-y-4">
             {/* Invoice Details */}
             {invoiceData && (
-              <div className="bg-gradient-to-br from-blue-50/40 to-blue-50/20 dark:from-blue-950/20 dark:to-blue-950/10 rounded-2xl card-shadow-md p-4 border border-blue-200 dark:border-blue-800">
+              <div className="bg-gradient-to-br from-green-50/40 to-green-50/20 dark:from-green-950/20 dark:to-green-950/10 rounded-2xl card-shadow-md p-4 border border-green-200 dark:border-green-800">
                 <h3 className="font-semibold text-foreground mb-3 text-sm flex items-center gap-2">
-                  <Package className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                  Invoice Details
+                  <Package className="w-4 h-4 text-green-600 dark:text-green-400" />
+                  Sale Details
                 </h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Vendor:</span>
+                    <span className="text-muted-foreground">Vendor/Buyer:</span>
                     <span className="font-medium text-foreground">{invoiceData.vendor}</span>
                   </div>
                   <div className="flex justify-between items-center">
@@ -228,9 +230,9 @@ export default function ScanBillForInventoryPage() {
                     <span className="text-muted-foreground">Date:</span>
                     <span className="font-medium text-foreground">{invoiceData.order_date}</span>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-blue-200 dark:border-blue-800">
+                  <div className="flex justify-between items-center pt-2 border-t border-green-200 dark:border-green-800">
                     <span className="text-muted-foreground font-semibold">Total Amount:</span>
-                    <span className="font-bold text-blue-600 dark:text-blue-400">₹{invoiceData.amount.toFixed(2)}</span>
+                    <span className="font-bold text-green-600 dark:text-green-400">₹{invoiceData.amount.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
@@ -276,7 +278,7 @@ export default function ScanBillForInventoryPage() {
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  Confirm & Add to Inventory
+                  Confirm & Add to Sales
                 </>
               )}
             </button>
@@ -289,8 +291,8 @@ export default function ScanBillForInventoryPage() {
             <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
               <Loader2 className="w-8 h-8 text-primary animate-spin" />
             </div>
-            <h3 className="text-lg font-bold text-foreground mb-2">Adding Products...</h3>
-            <p className="text-sm text-muted-foreground">Please wait while we add items to inventory</p>
+            <h3 className="text-lg font-bold text-foreground mb-2">Adding Sale...</h3>
+            <p className="text-sm text-muted-foreground">Please wait while we record the sale</p>
           </div>
         )}
       </div>
