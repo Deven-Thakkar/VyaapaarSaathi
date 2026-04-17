@@ -4,7 +4,7 @@ import { Wallet, TrendingUp, TrendingDown, HandCoins, Sparkles, ChevronRight, Al
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+
 
 function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
