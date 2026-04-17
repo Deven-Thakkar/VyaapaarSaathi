@@ -281,6 +281,7 @@ export default function InsightsPage() {
               </ResponsiveContainer>
             </div>
           </Panel>
+        </div>
       </div>
     </AppShell>
   );
