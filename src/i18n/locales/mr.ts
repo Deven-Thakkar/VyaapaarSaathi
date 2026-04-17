@@ -165,6 +165,9 @@ const mr: Translation = {
     aiRecs: "AI सूचना",
     reason: "कारण",
     action: "कृती",
+    downloadReport: "अहवाल डाउनलोड करा",
+    generating: "अहवाल तयार होत आहे…",
+    reportReady: "अहवाल डाउनलोड झाला",
   },
   common: {
     safe: "सुरक्षित",
