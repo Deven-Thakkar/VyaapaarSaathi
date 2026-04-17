@@ -68,6 +68,11 @@ const en = {
     vsYesterday: "vs yesterday",
     customersOverdue: "{{count}} overdue",
     watchUdhaar: "Watch udhaar collection",
+    lowStock: "Low Stock Items",
+    lowStockSub: "Running below threshold",
+    outOfStock: "Out of Stock",
+    outOfStockSub: "Immediate restock required",
+    items: "items",
   },
   add: {
     title: "Add Entry",
