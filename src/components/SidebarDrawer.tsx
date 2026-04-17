@@ -1,4 +1,4 @@
-import { Home, BarChart3, Sparkles, TrendingUp, Package, HandCoins, Settings, X } from "lucide-react";
+import { Home, BarChart3, Sparkles, TrendingUp, Package, HandCoins, Settings, X, Plus } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useEffect } from "react";
@@ -13,6 +13,7 @@ export default function SidebarDrawer({ open, onClose }: { open: boolean; onClos
     { icon: BarChart3, label: t("nav.insights"), path: "/insights" },
     { icon: Sparkles, label: t("nav.ai"), path: "/ai" },
     { icon: TrendingUp, label: t("nav.sales"), path: "/sales" },
+    { icon: Plus, label: t("nav.add"), path: "/add", highlight: true },
     { icon: Package, label: t("nav.inventory"), path: "/inventory" },
     { icon: HandCoins, label: t("nav.udhaar"), path: "/udhaari" },
     { icon: Settings, label: t("nav.settings"), path: "/settings" },
