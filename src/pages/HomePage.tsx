@@ -63,31 +63,6 @@ export default function HomePage() {
           <StatCard icon={HandCoins} label={t("home.udhaar")} value={23300} trend={`₹15K ${t("home.overdue")}`} up={false} />
         </div>
 
-        {/* Cash flow line chart */}
-        <div className="bg-card rounded-2xl card-shadow-md p-4 mb-5 animate-fade-up">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <h3 className="text-sm font-bold text-heading">{t("home.revenueTrend")}</h3>
-              <p className="text-[11px] text-muted-foreground">Last 7 days</p>
-            </div>
-            <span className="text-xs font-semibold text-success bg-success/10 px-2 py-1 rounded-full">↑ 14%</span>
-          </div>
-          <div className="h-44">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trendData} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
-                <CartesianGrid stroke="hsl(220 13% 91%)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="d" tick={{ fontSize: 10, fill: "hsl(215 16% 47%)" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(215 16% 47%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 1000}K`} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "1px solid hsl(220 13% 91%)", fontSize: 12 }}
-                  formatter={(v: number) => [`₹${v.toLocaleString("en-IN")}`, "Cash"]}
-                />
-                <Line type="monotone" dataKey="v" stroke="hsl(217 91% 60%)" strokeWidth={3} dot={{ r: 4, fill: "hsl(217 91% 60%)" }} activeDot={{ r: 6 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
         {/* Hero call button */}
         <button
           onClick={() => navigate("/ai")}
