@@ -8,6 +8,7 @@ import { useTranslation } from "react-i18next";
 import { triggerBolnaCall } from "@/lib/chatbot-api";
 import { useProfile } from "@/context/ProfileContext";
 import { toast } from "sonner";
+import SmartInsights from "@/components/SmartInsights";
 
 function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -61,6 +62,11 @@ export default function HomePage() {
           <StatCard icon={TrendingUp} label={t("home.revenueTrend")} value={118000} trend="+14%" up />
           <StatCard icon={TrendingDown} label={t("home.expenseBreakdown")} value={68000} trend="-5%" up={false} good />
           <StatCard icon={HandCoins} label={t("home.udhaar")} value={23300} trend={`₹15K ${t("home.overdue")}`} up={false} />
+        </div>
+
+        {/* Smart Insights ML Component */}
+        <div className="mb-5">
+          <SmartInsights />
         </div>
 
         {/* Hero call button */}
