@@ -1,4 +1,5 @@
 import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
 import { Search, ChevronRight, Package, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -52,8 +53,7 @@ export default function InventoryPage() {
           </div>
         )}
 
-        <h1 className="text-xl font-bold text-heading mb-1">{t("inventory.title")}</h1>
-        <p className="text-sm text-muted-foreground mb-5">{t("inventory.products")}</p>
+        <PageHeader title={t("inventory.title")} subtitle={t("inventory.products")} />
 
         {/* Search */}
         <div className="flex items-center gap-2 bg-card rounded-xl card-shadow px-3 py-2.5 mb-4">

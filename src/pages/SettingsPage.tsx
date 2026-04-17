@@ -1,5 +1,6 @@
 import AppShell from "@/components/AppShell";
-import { User, Building2, Globe, LogOut, ChevronRight, Pencil } from "lucide-react";
+import PageHeader from "@/components/PageHeader";
+import { User, Building2, Globe, LogOut, Pencil } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 
@@ -16,7 +17,7 @@ export default function SettingsPage() {
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto p-4 lg:p-6">
-        <h1 className="text-xl font-bold text-heading mb-5">{t("settings.title")}</h1>
+        <PageHeader title={t("settings.title")} />
 
         {/* Profile */}
         <div className="bg-card rounded-2xl card-shadow-md p-5 mb-4">
