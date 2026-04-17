@@ -3,6 +3,7 @@ import PageHeader from "@/components/PageHeader";
 import { useTranslation } from "react-i18next";
 import { Sparkles, TrendingUp, AlertCircle, AlertTriangle } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
+import { useProfile } from "@/context/ProfileContext";
 
 const forecastData = [
   ...Array.from({ length: 30 }, (_, i) => ({
@@ -22,13 +23,7 @@ const profitData = [
   { m: "Apr", v: 18 }, { m: "May", v: 22 }, { m: "Jun", v: 26 }, { m: "Jul", v: 28 },
 ];
 
-const expenseData = [
-  { name: "Stock", value: 45 },
-  { name: "Rent", value: 20 },
-  { name: "Salary", value: 18 },
-  { name: "Others", value: 17 },
-];
-const PIE_COLORS = ["hsl(217 91% 60%)", "hsl(142 71% 45%)", "hsl(38 92% 50%)", "hsl(215 16% 47%)"];
+const PIE_COLORS = ["hsl(217 91% 60%)", "hsl(142 71% 45%)", "hsl(38 92% 50%)", "hsl(262 83% 58%)"];
 
 const topProducts = [
   { name: "Sunflower Oil", units: 260 },
