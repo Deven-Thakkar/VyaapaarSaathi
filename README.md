@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# VyapaarSaathi — Smart Udhaari Assistant
 
 TODO: Document your project here

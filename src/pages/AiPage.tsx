@@ -3,8 +3,12 @@ import AiOrb from "@/components/AiOrb";
 import { Send, Sparkles } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { sendChatMessage } from "@/lib/chatbot-api";
 
 type Msg = { role: "user" | "ai"; text: string };
+
+// Default business ID – swap with ProfileContext value when multi-user is needed
+const DEFAULT_BUSINESS_ID = "7d1f8a08-ff5b-4bb6-8b9d-f9a3912b9b86";
 
 const initialMessages: Msg[] = [
   { role: "ai", text: "Namaste! Aaj main aapki kya madad kar sakta hoon?" },
@@ -14,22 +18,35 @@ export default function AiPage() {
   const { t } = useTranslation();
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const send = (text: string) => {
-    if (!text.trim()) return;
+  const send = async (text: string) => {
+    if (!text.trim() || isLoading) return;
+
     setMessages((m) => [...m, { role: "user", text }]);
     setInput("");
-    setTimeout(() => {
+    setIsLoading(true);
+
+    try {
+      const data = await sendChatMessage(text, DEFAULT_BUSINESS_ID);
+      setMessages((m) => [...m, { role: "ai", text: data.reply }]);
+    } catch (err) {
+      console.error("Chat API error:", err);
       setMessages((m) => [
         ...m,
-        { role: "ai", text: "Aaj ki sales ₹12,450 hai — kal se 18% zyada. Top product: Basmati Rice." },
+        {
+          role: "ai",
+          text: "Sorry, connection issue hai. Please try again.",
+        },
       ]);
-    }, 700);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -53,7 +70,8 @@ export default function AiPage() {
               <button
                 key={q}
                 onClick={() => send(q)}
-                className="text-[11px] bg-accent text-accent-foreground px-3 py-1.5 rounded-full font-medium hover-blue"
+                disabled={isLoading}
+                className="text-[11px] bg-accent text-accent-foreground px-3 py-1.5 rounded-full font-medium hover-blue disabled:opacity-50"
               >
                 "{q}"
               </button>
@@ -76,6 +94,18 @@ export default function AiPage() {
               </div>
             </div>
           ))}
+
+          {/* Typing indicator */}
+          {isLoading && (
+            <div className="flex justify-start animate-fade-up">
+              <div className="bg-card text-foreground rounded-2xl rounded-bl-md card-shadow px-4 py-2.5 flex items-center gap-1">
+                <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-2 h-2 bg-muted-foreground/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          )}
+
           <div ref={endRef} />
         </div>
 
@@ -87,10 +117,12 @@ export default function AiPage() {
             onKeyDown={(e) => e.key === "Enter" && send(input)}
             placeholder={t("ai.placeholder")}
             className="flex-1 bg-transparent outline-none text-sm px-2 placeholder:text-muted-foreground/60"
+            disabled={isLoading}
           />
           <button
             onClick={() => send(input)}
-            className="w-10 h-10 rounded-full bg-gradient-auth text-primary-foreground flex items-center justify-center active:scale-95 transition"
+            disabled={isLoading || !input.trim()}
+            className="w-10 h-10 rounded-full bg-gradient-auth text-primary-foreground flex items-center justify-center active:scale-95 transition disabled:opacity-50"
             aria-label="Send"
           >
             <Send className="w-4 h-4" />
