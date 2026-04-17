@@ -103,6 +103,8 @@ const hi: Translation = {
     week: "इस हफ्ते",
     month: "इस महीने",
     recent: "हाल के लेन-देन",
+    transactions: "लेन-देन",
+    noSales: "अभी कोई बिक्री नहीं",
     manualEntry: "मैनुअल बिक्री प्रविष्टि",
     vendorName: "विक्रेता का नाम",
     date: "बिक्री की तारीख",
@@ -142,6 +144,7 @@ const hi: Translation = {
     productAddError: "उत्पाद जोड़ने में विफल",
     barcode: "बारकोड",
     manual: "मैनुअल प्रविष्टि",
+    scanBill: "बिल स्कैन करें",
   },
   udhaar: {
     title: "उधार",

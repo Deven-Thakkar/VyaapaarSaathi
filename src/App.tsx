@@ -9,6 +9,7 @@ import HomePage from "./pages/HomePage";
 import AddPage from "./pages/AddPage";
 import VoiceEntryPage from "./pages/VoiceEntryPage";
 import ScanBillPage from "./pages/ScanBillPage";
+import ScanBillForInventoryPage from "./pages/ScanBillForInventoryPage";
 import SalesPage from "./pages/SalesPage";
 import AddManualSalesPage from "./pages/AddManualSalesPage";
 import InventoryPage from "./pages/InventoryPage";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/inventory/add" element={<AddProductPage />} />
             <Route path="/inventory/manual-entry" element={<AddManualStockPage />} />
+            <Route path="/inventory/scan" element={<ScanBillForInventoryPage />} />
             <Route path="/inventory/:id" element={<ProductDetailPage />} />
             <Route path="/udhaari" element={<UdhaariPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
