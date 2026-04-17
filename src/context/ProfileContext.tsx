@@ -6,6 +6,7 @@ export type FinancialProfile = {
   email: string;
   businessName: string;
   businessType: string;
+  businessId?: string;
   monthlyRevenue: number;
   investment: number;
   goal: string;

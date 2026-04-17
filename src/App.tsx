@@ -17,6 +17,7 @@ import TransactionsPage from "./pages/TransactionsPage";
 import AiPage from "./pages/AiPage";
 import SettingsPage from "./pages/SettingsPage";
 import InsightsPage from "./pages/InsightsPage";
+import CustomersPage from "./pages/CustomersPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/login" element={<LoginPage />} />
             <Route path="/home" element={<HomePage />} />
             <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/customers" element={<CustomersPage />} />
             <Route path="/add" element={<AddPage />} />
             <Route path="/add/voice" element={<VoiceEntryPage />} />
             <Route path="/add/scan" element={<ScanBillPage />} />

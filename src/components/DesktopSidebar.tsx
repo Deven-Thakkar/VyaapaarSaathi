@@ -1,4 +1,4 @@
-import { Home, BarChart3, Sparkles, TrendingUp, Package, HandCoins, Settings } from "lucide-react";
+import { Home, BarChart3, Sparkles, TrendingUp, Package, HandCoins, Settings, Users } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +15,7 @@ export default function DesktopSidebar() {
     { icon: Sparkles, label: t("nav.ai"), path: "/ai" },
     { icon: TrendingUp, label: t("nav.sales"), path: "/sales" },
     { icon: Package, label: t("nav.inventory"), path: "/inventory" },
+    { icon: Users, label: t("nav.customers"), path: "/customers" },
     { icon: HandCoins, label: t("nav.udhaar"), path: "/udhaari" },
     { icon: Settings, label: t("nav.settings"), path: "/settings" },
   ];

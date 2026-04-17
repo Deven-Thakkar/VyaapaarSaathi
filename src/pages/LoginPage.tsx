@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabase";
+import { createCustomer } from "@/lib/customer-api";
 
 type Tab = "login" | "signup";
 
@@ -46,29 +47,51 @@ export default function LoginPage() {
       setIsLoading(true);
 
       // Insert into Supabase table public.businesses
-      const { error } = await supabase.from("businesses").insert([{
-        owner_name: name || "Rahul Sharma",
-        phone_number: signupPhone ? "+91 " + signupPhone : null,
-        shop_name: `${name || "Rahul"}'s Shop`,
-        business_type: bizType,
-        monthly_revenue: Number(revenue) || 0,
-        investment_amount: Number(investment) || 0,
-        cost_stock: Number(stock) || 0,
-        cost_salaries: Number(salaries) || 0,
-        cost_rent: Number(rent) || 0,
-        cost_utilities: Number(utilities) || 0,
-      }]);
+      const { data: businessData, error: businessError } = await supabase
+        .from("businesses")
+        .insert([
+          {
+            owner_name: name || "Rahul Sharma",
+            phone_number: signupPhone ? "+91 " + signupPhone : null,
+            shop_name: `${name || "Rahul"}'s Shop`,
+            business_type: bizType,
+            monthly_revenue: Number(revenue) || 0,
+            investment_amount: Number(investment) || 0,
+            cost_stock: Number(stock) || 0,
+            cost_salaries: Number(salaries) || 0,
+            cost_rent: Number(rent) || 0,
+            cost_utilities: Number(utilities) || 0,
+          },
+        ])
+        .select()
+        .single();
 
-      if (error) {
-        console.error("Signup error:", error);
+      if (businessError) {
+        console.error("Signup error:", businessError);
         alert("Failed to create account. Please try again.");
         return;
+      }
+
+      const businessId = businessData.id;
+
+      // Create a default customer entry for the business
+      try {
+        await createCustomer({
+          business_id: businessId,
+          name: name || "Rahul Sharma",
+          phone_number: signupPhone ? "+91" + signupPhone : undefined,
+          total_outstanding: 0,
+        });
+      } catch (customerError) {
+        console.error("Warning: Failed to create initial customer:", customerError);
+        // Don't block signup if customer creation fails, but log it
       }
 
       // Update local profile state
       updateProfile({
         name: name || "Rahul Sharma",
         ...(signupPhone ? { phone: "+91 " + signupPhone } : {}),
+        businessId: businessId,
         businessType: bizType,
         monthlyRevenue: Number(revenue) || 0,
         investment: Number(investment) || 0,
