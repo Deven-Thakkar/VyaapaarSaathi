@@ -44,34 +44,32 @@ export default function InsightsPage() {
     });
   }, [profile?.business_id]);
 
-  const handleDownload = () => {
-    if (!data) return;
+  const handleDownload = async () => {
     setGenerating(true);
-    setTimeout(() => {
-      const lines = [
-        "VyapaarSaathi — Business Insights Report",
-        `Generated: ${new Date().toLocaleString("en-IN")}`,
-        "",
-        "Summary (Last 30 Days):",
-        `  Sales: ₹${data.summary.sales_30d.toLocaleString("en-IN")}`,
-        `  Expenses: ₹${data.summary.expenses_30d.toLocaleString("en-IN")}`,
-        `  Net: ₹${data.summary.net_30d.toLocaleString("en-IN")}`,
-        "",
-        "Top Products (units in stock):",
-        ...data.top_products.map((p: any) => `  ${p.name}: ${p.units}`),
-      ].join("\n");
-      const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
+    try {
+      const response = await fetch("/api/download-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ business_id: profile?.business_id ?? null }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate report");
+
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `vyapaarsaathi-report-${Date.now()}.txt`;
+      a.download = `VyapaarSaathi_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setGenerating(false);
       toast.success(t("insightsPage.reportReady"));
-    }, 900);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to download report");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   if (loading) {
