@@ -18,135 +18,158 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Mount chatbot routes under /api
 app.use("/api", createChatbotRouter());
-
-// Mount invoice routes under /api
 app.use("/api", createInvoiceRouter());
 
-// ✅ ML Prediction Route (raw passthrough - used by chatbot internally)
-app.post('/api/predict', async (req, res) => {
-  try {
-    const response = await axios.post('http://localhost:8000/predict', req.body);
-    res.json(response.data);
-  } catch (error) {
-    if (error.response) {
-      res.status(error.response.status).json(error.response.data);
-    } else {
-      res.status(500).json({ error: 'Failed to reach ML service' });
-    }
+// ─── Helper: generate insight text from predictions + raw data ───
+function generateInsights(cashflow, risk, sales, expenses, overdue_udhaar, inventory_value) {
+  const insights = [];
+
+  if (cashflow < expenses) {
+    insights.push({ level: "warning", text: "Cash shortage likely. Reduce expenses or collect udhaar urgently." });
   }
-});
+  if (overdue_udhaar > sales * 0.3) {
+    insights.push({ level: "warning", text: "Large overdue payments outstanding. Follow up immediately." });
+  }
+  if (inventory_value < sales * 0.5 && sales > 0) {
+    insights.push({ level: "info", text: "Inventory running low relative to sales. Restock soon to avoid stockout." });
+  }
+  if (risk > 0.6) {
+    insights.push({ level: "danger", text: "High business risk detected. Reduce fixed costs or increase collections." });
+  }
+  if (insights.length === 0) {
+    insights.push({ level: "success", text: "Business is stable. Keep monitoring your udhaar recovery rate." });
+  }
 
-// ✅ Smart Insights - fetches REAL Supabase data, then calls ML API
-app.post('/api/smart-insights', async (req, res) => {
-  const supabase = createClient(
-    process.env.SUPABASE_URL,
-    process.env.SUPABASE_KEY
-  );
+  return insights;
+}
 
+// ─── Helper: rule-based fallback when Python ML unavailable ───
+function ruleBased(payload) {
+  const { sales, expenses, udhaar_given, inventory_value } = payload;
+  const expense_ratio = expenses / (sales + 1);
+  const udhaar_ratio = udhaar_given / (sales + 1);
+  return {
+    cashflow_prediction: (sales * 0.95) - (expenses * 0.08) + (inventory_value * 0.01),
+    risk_prediction: Math.min(1.0, expense_ratio * 0.6 + udhaar_ratio * 0.4),
+    source: "rule_based_fallback"
+  };
+}
+
+// ─── POST /api/predict — fully data-driven ───
+app.post("/api/predict", async (req, res) => {
+  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
   const { business_id } = req.body;
-  let sales = 0, expenses = 0, inventory_value = 0, udhaar_given = 0;
-  let businessData = null;
+
+  let sales = 0, expenses = 0, inventory_value = 0;
+  let udhaar_given = 0, overdue_udhaar = 0;
+  let fixedCosts = 0;
 
   try {
     if (business_id) {
-      // 1. Business profile
+      // 1. Business profile — fixed costs
       const { data: biz } = await supabase
-        .from('businesses')
-        .select('monthly_revenue, cost_stock, cost_salaries, cost_rent, cost_utilities')
-        .eq('id', business_id)
+        .from("businesses")
+        .select("monthly_revenue, cost_stock, cost_salaries, cost_rent, cost_utilities")
+        .eq("id", business_id)
         .single();
-      businessData = biz;
 
-      // 2. Transactions: sum income and expense this month
+      if (biz) {
+        fixedCosts = Number(biz.cost_stock || 0) + Number(biz.cost_salaries || 0)
+          + Number(biz.cost_rent || 0) + Number(biz.cost_utilities || 0);
+      }
+
+      // 2. Transactions — current month income and expense
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
       const { data: txns } = await supabase
-        .from('transactions')
-        .select('type, amount')
-        .eq('business_id', business_id)
-        .gte('transaction_date', startOfMonth.toISOString());
+        .from("transactions")
+        .select("type, amount")
+        .eq("business_id", business_id)
+        .gte("transaction_date", startOfMonth.toISOString());
 
       if (txns && txns.length > 0) {
-        sales = txns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-        expenses = txns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+        sales = txns.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
+        expenses = txns.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
       }
 
-      // 3. Udhaar outstanding (pending records)
+      // 3. Udhaar — total pending and overdue
+      const today = new Date().toISOString();
       const { data: udhaarData } = await supabase
-        .from('udhaar_records')
-        .select('amount_remaining')
-        .eq('business_id', business_id)
-        .eq('status', 'pending');
+        .from("udhaar_records")
+        .select("amount_remaining, due_date")
+        .eq("business_id", business_id)
+        .eq("status", "pending");
 
       if (udhaarData && udhaarData.length > 0) {
         udhaar_given = udhaarData.reduce((s, u) => s + Number(u.amount_remaining), 0);
+        overdue_udhaar = udhaarData
+          .filter(u => u.due_date && u.due_date < today)
+          .reduce((s, u) => s + Number(u.amount_remaining), 0);
       }
 
-      // 4. Inventory value (stock * price)
+      // 4. Inventory value — SUM(stock * price)
       const { data: products } = await supabase
-        .from('products')
-        .select('stock, price')
-        .eq('business_id', business_id);
+        .from("products")
+        .select("stock, price")
+        .eq("business_id", business_id);
 
       if (products && products.length > 0) {
         inventory_value = products.reduce((s, p) => s + (Number(p.stock) * Number(p.price)), 0);
       }
     }
 
-    // Fallback to demo data if no real data found
-    const useMock = !business_id || (sales === 0 && expenses === 0 && udhaar_given === 0);
-    const fixedCosts = businessData
-      ? Number(businessData.cost_stock || 0) + Number(businessData.cost_salaries || 0) + Number(businessData.cost_rent || 0) + Number(businessData.cost_utilities || 0)
-      : 0;
-
-    const payload = useMock ? {
-      sales: 12450,
-      expenses: 8000,
-      cash_balance: 50000,
-      udhaar_given: 23300,
-      udhaar_collected: 0,
-      inventory_value: 150000
-    } : {
-      sales,
-      expenses: expenses || fixedCosts,
-      cash_balance: Math.max(0, sales - expenses),
-      udhaar_given,
-      udhaar_collected: 0,
-      inventory_value
+    // Build feature payload (all real, no mocks)
+    const payload = {
+      sales:             sales,
+      expenses:          expenses > 0 ? expenses : fixedCosts,
+      cash_balance:      Math.max(0, sales - expenses),
+      udhaar_given:      udhaar_given,
+      udhaar_collected:  0,
+      inventory_value:   inventory_value
     };
+
+    // Ensure no nulls
+    Object.keys(payload).forEach(k => { if (!payload[k] || isNaN(payload[k])) payload[k] = 0; });
 
     // Call Python ML API
     let mlResult;
     try {
-      const mlResponse = await axios.post('http://localhost:8000/predict', payload, { timeout: 5000 });
+      const mlResponse = await axios.post("http://localhost:8000/predict", payload, { timeout: 5000 });
       mlResult = mlResponse.data;
-    } catch (mlErr) {
-      // ML unavailable: inline rule-based fallback (never returns 500 to frontend)
-      const expense_ratio = payload.expenses / (payload.sales + 1);
-      const udhaar_ratio = payload.udhaar_given / (payload.sales + 1);
-      mlResult = {
-        cashflow_prediction: (payload.sales * 0.95) - (payload.expenses * 0.08) + (payload.inventory_value * 0.01),
-        risk_prediction: Math.min(1.0, expense_ratio * 0.6 + udhaar_ratio * 0.4),
-        source: 'node_rule_fallback'
-      };
+    } catch (_) {
+      mlResult = ruleBased(payload);
     }
 
+    // Generate human insights
+    const insights = generateInsights(
+      mlResult.cashflow_prediction,
+      mlResult.risk_prediction,
+      sales,
+      payload.expenses,
+      overdue_udhaar,
+      inventory_value
+    );
+
     res.json({
-      ...mlResult,
+      cashflow_prediction: mlResult.cashflow_prediction,
+      risk_prediction:     mlResult.risk_prediction,
+      source:              mlResult.source || "ml_model",
+      insights,
       meta: {
         sales,
-        expenses,
+        expenses:        payload.expenses,
         udhaar_given,
+        overdue_udhaar,
         inventory_value,
-        is_demo: useMock
+        has_data:        sales > 0 || expenses > 0 || udhaar_given > 0
       }
     });
+
   } catch (err) {
-    console.error('Smart insights error:', err.message);
+    console.error("Predict error:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -159,15 +182,14 @@ app.get("/", (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`✅ API server running on http://localhost:${PORT}`);
+  console.log(`[OK] API server running on http://localhost:${PORT}`);
 });
 
-// Handle port-in-use and other listen errors
 server.on("error", (err) => {
   if (err.code === "EADDRINUSE") {
-    console.error(`❌ Port ${PORT} is already in use. Kill the other process or change PORT in .env`);
+    console.error(`[ERR] Port ${PORT} is already in use.`);
   } else {
-    console.error("❌ Server error:", err);
+    console.error("[ERR] Server error:", err);
   }
   process.exit(1);
 });
