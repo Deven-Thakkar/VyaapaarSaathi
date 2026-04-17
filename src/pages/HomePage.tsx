@@ -1,10 +1,9 @@
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
-import { Wallet, TrendingUp, TrendingDown, HandCoins, Sparkles, ChevronRight, AlertTriangle, IndianRupee, PhoneCall, MessageSquare } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, HandCoins, Sparkles, ChevronRight, AlertTriangle, IndianRupee, PhoneCall, MessageSquare, PackageX, PackageSearch } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-
 
 function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string }) {
   const [display, setDisplay] = useState(0);
@@ -26,24 +25,39 @@ export default function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const profileButton = (
-    <button
-      onClick={() => navigate("/settings")}
-      className="w-9 h-9 rounded-full bg-gradient-auth flex items-center justify-center text-primary-foreground font-bold text-sm shadow-md"
-      aria-label="Profile"
-    >
-      R
-    </button>
-  );
-
   return (
     <AppShell>
       <div className="max-w-6xl mx-auto p-4 lg:p-6">
         <PageHeader
-          title={`${t("home.greeting")}, Rahul 👋`}
-          subtitle={t("app.tagline")}
-          right={profileButton}
+          title="VyapaarSaathi"
+          subtitle={`${t("home.greeting")}, Rahul 👋`}
         />
+
+        {/* Stock alert cards */}
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <button
+            onClick={() => navigate("/inventory")}
+            className="text-left bg-card rounded-2xl card-shadow p-4 lift transition-all border-l-4 border-warning"
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <PackageSearch className="w-4 h-4 text-warning" />
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("home.lowStock")}</span>
+            </div>
+            <p className="text-2xl font-extrabold text-warning">12 <span className="text-sm font-bold text-muted-foreground">{t("home.items")}</span></p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t("home.lowStockSub")}</p>
+          </button>
+          <button
+            onClick={() => navigate("/inventory")}
+            className="text-left bg-card rounded-2xl card-shadow p-4 lift transition-all border-l-4 border-destructive"
+          >
+            <div className="flex items-center gap-2 mb-1.5">
+              <PackageX className="w-4 h-4 text-destructive" />
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("home.outOfStock")}</span>
+            </div>
+            <p className="text-2xl font-extrabold text-destructive">5 <span className="text-sm font-bold text-muted-foreground">{t("home.items")}</span></p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t("home.outOfStockSub")}</p>
+          </button>
+        </div>
 
         {/* Top 4 stat cards */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">

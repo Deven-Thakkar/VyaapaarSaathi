@@ -75,6 +75,7 @@ export default function SidebarDrawer({ open, onClose }: { open: boolean; onClos
         <nav className="flex-1 overflow-y-auto p-3 space-y-1">
           {items.map((item) => {
             const active = location.pathname === item.path;
+            const isHighlight = (item as any).highlight;
             return (
               <button
                 key={item.path}
@@ -85,7 +86,15 @@ export default function SidebarDrawer({ open, onClose }: { open: boolean; onClos
                     : "text-foreground hover:bg-accent hover:text-primary"
                 }`}
               >
-                <item.icon className="w-5 h-5 shrink-0" />
+                <span
+                  className={`flex items-center justify-center shrink-0 ${
+                    isHighlight && !active
+                      ? "w-7 h-7 rounded-full bg-primary text-primary-foreground"
+                      : "w-5 h-5"
+                  }`}
+                >
+                  <item.icon className={isHighlight && !active ? "w-4 h-4" : "w-5 h-5"} strokeWidth={isHighlight ? 3 : 2} />
+                </span>
                 <span>{item.label}</span>
               </button>
             );
