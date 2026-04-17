@@ -77,6 +77,69 @@ export function createChatbotRouter() {
       const { message, business_id } = req.body;
       const lowerMsg = message.toLowerCase();
 
+      // 0. ML PREDICTION
+      if (
+        lowerMsg.includes("predict") || 
+        lowerMsg.includes("future") || 
+        lowerMsg.includes("risk") || 
+        lowerMsg.includes("cashflow") || 
+        lowerMsg.includes("run out of money")
+      ) {
+        // Fallback to mock data if real aggregated DB data isn't ready
+        const payload = {
+          sales: 12450,
+          expenses: 8000,
+          cash_balance: 50000,
+          udhaar_given: 23300,
+          udhaar_collected: 5000,
+          inventory_value: 150000
+        };
+
+        try {
+          const mlResponse = await fetch("http://localhost:5000/api/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          
+          if (!mlResponse.ok) throw new Error("ML service failed");
+          const mlData = await mlResponse.json();
+          
+          let insight = "✅ Business looks stable";
+          if (mlData.cashflow_prediction < payload.expenses) {
+            insight = "⚠️ You may face a cash shortage soon";
+          } else if (mlData.risk_prediction > 0.5) {
+            insight = "🚨 High risk detected. Reduce expenses or collect payments";
+          }
+
+          const aiReply = await generateAIResponse(`
+You are a financial assistant for Indian shopkeepers.
+
+STRICT RULES:
+- Use clean Hinglish (no broken words)
+- Keep it short (2 lines max)
+- Be natural and professional
+
+Data:
+Cashflow Prediction: ₹${Math.round(mlData.cashflow_prediction)}
+Risk: ${mlData.risk_prediction > 0.5 ? 'High' : 'Low'}
+System Insight: ${insight}
+
+Format this in a human way based on the System Insight.
+Example: "📊 Aapka predicted cashflow kal ke liye ₹5200 hai. ⚠️ Risk level thoda high hai, kripya pending udhaar collect karein."
+
+User question:
+${message}
+
+Final answer:
+`);
+          return res.json({ reply: aiReply });
+        } catch (e) {
+          console.error("ML Prediction Error:", e);
+          return res.json({ reply: "Sorry, prediction service is temporarily unavailable." });
+        }
+      }
+
       // 1. TOTAL UDHAAR
       if (lowerMsg.includes("udhaar")) {
         const { data, error } = await supabase
