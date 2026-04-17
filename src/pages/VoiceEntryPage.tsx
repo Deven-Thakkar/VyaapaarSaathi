@@ -7,16 +7,22 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 
 interface ParsedData {
-  type: "sale" | "inventory" | null;
-  product: string | null;
-  quantity: number | null;
-  unit: string | null;
-  price: number | null;
+  type: "sale" | "inventory" | "income" | null;
+  product?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  price?: number | null;
+  amount?: number | null;
+  description?: string | null;
+  payment_method?: string | null;
 }
 
 export default function VoiceEntryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const searchParams = new URLSearchParams(window.location.search);
+  const entryType = searchParams.get("type") || "inventory"; // "inventory" or "sales"
+
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -90,7 +96,31 @@ export default function VoiceEntryPage() {
       return;
     }
 
-    const systemPrompt = `
+    let systemPrompt = "";
+    if (entryType === "sales") {
+      systemPrompt = `
+Return ONLY valid JSON. No extra text.
+
+FORMAT:
+{
+  "type": "sale" | "income",
+  "amount": number,
+  "description": string,
+  "payment_method": "cash" | "upi" | "udhaar" | null
+}
+
+RULES:
+- Extract the total amount received, earned or sold for (e.g. "500 rupaye ki bikri" -> amount: 500).
+- Extract description of what was sold or source of income (e.g. "bikri", "sale", "shoes sold", "services").
+- Map payment methods: 
+   - paytm, gpay, phonepe, qr, online -> "upi"
+   - nakad, rokda -> "cash"
+   - baaki, udhaar, baad mein dega -> "udhaar"
+- Translate description briefly to English (e.g., "joote beche" -> "shoes sold").
+- MUST extract amount as a valid number.
+`;
+    } else {
+      systemPrompt = `
 Return ONLY valid JSON. No extra text.
 
 FORMAT:
@@ -103,13 +133,14 @@ FORMAT:
 }
 
 RULES:
-- sold, becha → sale
-- add, bought, khareeda, laya → inventory
-- cheeni → sugar, chawal → rice, tel → oil, doodh → milk, atta → flour
-- kilo → kg, packet → packet
+- sold, becha -> sale
+- add, bought, khareeda, laya -> inventory
+- cheeni -> sugar, chawal -> rice, tel -> oil, doodh -> milk, atta -> flour
+- kilo -> kg, packet -> packet
 - Extract numbers for quantity
 - Extract price if ₹, rs, rupees present
 `;
+    }
 
     try {
       const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
@@ -181,7 +212,9 @@ RULES:
               {isListening ? "Listening..." : "Tap the mic and speak"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Example: "5 kilo cheeni khareeda 200 rupaye mein"
+              {entryType === "sales" 
+                ? 'Example: "500 rupaye ki bikri hui cash mein"' 
+                : 'Example: "5 kilo cheeni khareeda 200 rupaye mein"'}
             </p>
           </div>
 
@@ -239,19 +272,29 @@ RULES:
                 </div>
 
                 <div className="space-y-3">
-                  <DetailRow label="Product" value={parsedData.product} />
-                  <DetailRow 
-                    label="Quantity" 
-                    value={parsedData.quantity ? `${parsedData.quantity} ${parsedData.unit || ''}` : null} 
-                  />
-                  <DetailRow 
-                    label="Price" 
-                    value={parsedData.price ? `₹${parsedData.price}` : null} 
-                  />
+                  {entryType === "sales" ? (
+                    <>
+                      <DetailRow label="Description" value={parsedData.description} />
+                      <DetailRow label="Amount" value={parsedData.amount ? `₹${parsedData.amount}` : null} />
+                      <DetailRow label="Payment Method" value={parsedData.payment_method} />
+                    </>
+                  ) : (
+                    <>
+                      <DetailRow label="Product" value={parsedData.product} />
+                      <DetailRow 
+                        label="Quantity" 
+                        value={parsedData.quantity ? `${parsedData.quantity} ${parsedData.unit || ''}` : null} 
+                      />
+                      <DetailRow 
+                        label="Price" 
+                        value={parsedData.price ? `₹${parsedData.price}` : null} 
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
-              {!parsedData.product || (!parsedData.quantity && !parsedData.price) ? (
+              { (entryType === "sales" && !parsedData.amount) || (entryType !== "sales" && (!parsedData.product || (!parsedData.quantity && !parsedData.price))) ? (
                 <div className="flex items-start gap-2 p-3 bg-red-50 text-red-600 rounded-xl mb-4 text-sm">
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <p>Could not extract complete details. Please try speaking clearly again.</p>
