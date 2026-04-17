@@ -1,6 +1,6 @@
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
-import { Search, ChevronRight, Package, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Search, ChevronRight, Package, ArrowUpRight, ArrowDownRight, PackageSearch, PackageX } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -54,6 +54,26 @@ export default function InventoryPage() {
         )}
 
         <PageHeader title={t("inventory.title")} subtitle={t("inventory.products")} />
+
+        {/* Stock alert cards */}
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div className="bg-warning/10 border border-warning/30 rounded-2xl card-shadow p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <PackageSearch className="w-4 h-4 text-warning" />
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-warning">{t("home.lowStock")}</span>
+            </div>
+            <p className="text-2xl font-extrabold text-warning">12 <span className="text-sm font-bold text-warning/70">{t("home.items")}</span></p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t("home.lowStockSub")}</p>
+          </div>
+          <div className="bg-destructive/10 border border-destructive/30 rounded-2xl card-shadow p-4">
+            <div className="flex items-center gap-2 mb-1.5">
+              <PackageX className="w-4 h-4 text-destructive" />
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-destructive">{t("home.outOfStock")}</span>
+            </div>
+            <p className="text-2xl font-extrabold text-destructive">5 <span className="text-sm font-bold text-destructive/70">{t("home.items")}</span></p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t("home.outOfStockSub")}</p>
+          </div>
+        </div>
 
         {/* Search */}
         <div className="flex items-center gap-2 bg-card rounded-xl card-shadow px-3 py-2.5 mb-4">

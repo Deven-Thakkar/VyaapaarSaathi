@@ -163,6 +163,9 @@ const en = {
     aiRecs: "AI Recommendations",
     reason: "Reason",
     action: "Action",
+    downloadReport: "Download Report",
+    generating: "Generating report…",
+    reportReady: "Report downloaded",
   },
   common: {
     safe: "Safe",
