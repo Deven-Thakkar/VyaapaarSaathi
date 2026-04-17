@@ -73,6 +73,15 @@ const toneStyles: Record<Tone, { dot: string; border: string; bg: string; text: 
 
 export default function InsightsPage() {
   const { t } = useTranslation();
+  const { profile } = useProfile();
+
+  const expenseData = [
+    { name: t("auth.stock"), value: profile.stock },
+    { name: t("auth.salaries"), value: profile.salaries },
+    { name: t("auth.rent"), value: profile.rent },
+    { name: t("auth.utilities"), value: profile.utilities },
+  ];
+  const totalExpense = expenseData.reduce((s, d) => s + d.value, 0) || 1;
 
   return (
     <AppShell>
