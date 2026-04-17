@@ -22,16 +22,6 @@ function AnimatedNumber({ value, prefix = "" }: { value: number; prefix?: string
   return <>{prefix}{display.toLocaleString("en-IN")}</>;
 }
 
-const trendData = [
-  { d: "Mon", v: 9200 },
-  { d: "Tue", v: 10500 },
-  { d: "Wed", v: 8800 },
-  { d: "Thu", v: 11200 },
-  { d: "Fri", v: 13400 },
-  { d: "Sat", v: 12100 },
-  { d: "Sun", v: 12450 },
-];
-
 export default function HomePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
