@@ -5,7 +5,7 @@
  * and can be overridden for production deployments.
  */
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
 // ─── Types ───
 
@@ -86,6 +86,45 @@ export async function addUdhaar(
       business_id: businessId,
       amount,
     }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Network error" }));
+    throw new Error(err.error || `Request failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Send WhatsApp Business Insights
+ */
+export async function sendWhatsappSummary(
+  type: "daily" | "weekly" | "monthly",
+  businessId: string
+): Promise<{ success: boolean; message?: string; reply?: string }> {
+  const res = await fetch(`${API_BASE}/send-whatsapp-summary`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, business_id: businessId }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: "Network error" }));
+    throw new Error(err.error || `Request failed (${res.status})`);
+  }
+
+  return res.json();
+}
+
+/**
+ * Trigger Bolna AI Call
+ */
+export async function triggerBolnaCall(businessId?: string): Promise<any> {
+  const res = await fetch(`${API_BASE}/bolna-call`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ business_id: businessId }),
   });
 
   if (!res.ok) {

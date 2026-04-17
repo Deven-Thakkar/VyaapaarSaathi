@@ -7,6 +7,8 @@ import { ProfileProvider } from "./context/ProfileContext";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import AddPage from "./pages/AddPage";
+import VoiceEntryPage from "./pages/VoiceEntryPage";
+import ScanBillPage from "./pages/ScanBillPage";
 import SalesPage from "./pages/SalesPage";
 import InventoryPage from "./pages/InventoryPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
@@ -32,6 +34,8 @@ const App = () => (
             <Route path="/home" element={<HomePage />} />
             <Route path="/insights" element={<InsightsPage />} />
             <Route path="/add" element={<AddPage />} />
+            <Route path="/add/voice" element={<VoiceEntryPage />} />
+            <Route path="/add/scan" element={<ScanBillPage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/inventory/:id" element={<ProductDetailPage />} />

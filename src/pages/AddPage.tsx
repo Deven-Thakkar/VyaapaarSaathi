@@ -3,11 +3,13 @@ import PageHeader from "@/components/PageHeader";
 import { Camera, Barcode, Mic, PenLine, Package, IndianRupee, ArrowLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 
 type Category = "inventory" | "sales";
 
 export default function AddPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const [category, setCategory] = useState<Category | null>(null);
 
   const methods = [
@@ -84,6 +86,16 @@ export default function AddPage() {
             {methods.map((m) => (
               <button
                 key={m.key}
+                onClick={() => {
+                  if (m.key === "voice") {
+                    navigate("/add/voice");
+                  } else if (m.key === "scan") {
+                    navigate("/add/scan");
+                  } else {
+                    // Placeholder for other methods
+                    console.log(`${m.key} clicked`);
+                  }
+                }}
                 className={`flex flex-col items-center gap-3 bg-card rounded-2xl card-shadow p-6 lift active:scale-[0.97] transition-all border-2 border-transparent ${m.ring}`}
               >
                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${m.iconBg}`}>

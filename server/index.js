@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createChatbotRouter } from "./chatbot.js";
+import { createInvoiceRouter } from "./invoice.js";
 
 dotenv.config();
 
@@ -11,6 +12,8 @@ app.use(express.json());
 
 // Mount chatbot routes under /api
 app.use("/api", createChatbotRouter());
+// Mount invoice routes under /api
+app.use("/api", createInvoiceRouter());
 
 // Root health check
 app.get("/", (req, res) => {

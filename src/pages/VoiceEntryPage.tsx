@@ -1,0 +1,285 @@
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import { useState, useRef, useEffect } from "react";
+import { Mic, Loader2, ArrowLeft, Check, Package, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
+
+interface ParsedData {
+  type: "sale" | "inventory" | null;
+  product: string | null;
+  quantity: number | null;
+  unit: string | null;
+  price: number | null;
+}
+
+export default function VoiceEntryPage() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [isListening, setIsListening] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [transcript, setTranscript] = useState("");
+  const [parsedData, setParsedData] = useState<ParsedData | null>(null);
+  
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    // Check for browser support
+    if (!("webkitSpeechRecognition" in window)) {
+      toast.error("Your browser doesn't support voice recognition. Please use Chrome.");
+      return;
+    }
+
+    const SpeechRecognition = (window as any).webkitSpeechRecognition;
+    recognitionRef.current = new SpeechRecognition();
+    recognitionRef.current.lang = "en-IN"; // Set to Indian English/Hinglish
+    recognitionRef.current.continuous = false;
+    recognitionRef.current.interimResults = false;
+
+    recognitionRef.current.onstart = () => {
+      setIsListening(true);
+      setParsedData(null);
+      setTranscript("");
+    };
+
+    recognitionRef.current.onresult = async (event: any) => {
+      const currentTranscript = event.results[0][0].transcript;
+      setTranscript(currentTranscript);
+      setIsListening(false);
+      
+      await processSpeech(currentTranscript);
+    };
+
+    recognitionRef.current.onerror = (event: any) => {
+      console.error("Speech Error:", event.error);
+      setIsListening(false);
+      toast.error("Error recognizing speech. Please try again.");
+    };
+
+    recognitionRef.current.onspeechend = () => {
+      setIsListening(false);
+    };
+
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  const toggleListening = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+    } else {
+      try {
+        recognitionRef.current?.start();
+      } catch (e) {
+        console.error(e);
+      }
+    }
+  };
+
+  const processSpeech = async (text: string) => {
+    setIsProcessing(true);
+    
+    const SARVAM_API_KEY = import.meta.env.VITE_SARVAM_API_KEY;
+    if (!SARVAM_API_KEY) {
+      toast.error("Sarvam API key is missing in environment variables.");
+      setIsProcessing(false);
+      return;
+    }
+
+    const systemPrompt = `
+Return ONLY valid JSON. No extra text.
+
+FORMAT:
+{
+  "type": "sale" | "inventory",
+  "product": string,
+  "quantity": number,
+  "unit": "kg" | "g" | "litre" | "packet" | "piece" | null,
+  "price": number | null
+}
+
+RULES:
+- sold, becha → sale
+- add, bought, khareeda, laya → inventory
+- cheeni → sugar, chawal → rice, tel → oil, doodh → milk, atta → flour
+- kilo → kg, packet → packet
+- Extract numbers for quantity
+- Extract price if ₹, rs, rupees present
+`;
+
+    try {
+      const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + SARVAM_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "sarvam-m",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: text }
+          ]
+        })
+      });
+
+      const data = await res.json();
+      const content = data?.choices?.[0]?.message?.content;
+
+      if (!content) {
+        throw new Error("Invalid response from AI");
+      }
+
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error("No JSON found in response");
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]) as ParsedData;
+      setParsedData(parsed);
+      toast.success("Voice processed successfully!");
+
+    } catch (err: any) {
+      console.error("API Error:", err);
+      toast.error("Failed to process speech. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleSave = () => {
+    // For hackathon scope, we just show a toast and navigate back.
+    // In the future, this will insert into a Supabase table.
+    toast.success(`${parsedData?.type === "sale" ? "Sale" : "Inventory"} saved successfully!`);
+    navigate("/home");
+  };
+
+  return (
+    <AppShell>
+      <div className="max-w-2xl mx-auto p-4 lg:p-6 h-full flex flex-col">
+        <PageHeader
+          title="Voice Entry"
+          subtitle="Speak to record items"
+          right={
+            <button
+              onClick={() => navigate(-1)}
+              className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-accent transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          }
+        />
+
+        <div className="flex-1 flex flex-col items-center justify-center py-10">
+          
+          <div className="text-center mb-10">
+            <h2 className="text-xl font-bold text-heading mb-2">
+              {isListening ? "Listening..." : "Tap the mic and speak"}
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Example: "5 kilo cheeni khareeda 200 rupaye mein"
+            </p>
+          </div>
+
+          <button
+            onClick={toggleListening}
+            disabled={isProcessing}
+            className={`relative flex items-center justify-center w-32 h-32 rounded-full mb-8 transition-all duration-300 ${
+              isListening 
+                ? "bg-red-500 scale-110 shadow-[0_0_40px_rgba(239,68,68,0.6)]" 
+                : isProcessing
+                ? "bg-muted cursor-not-allowed"
+                : "bg-primary shadow-[0_0_30px_rgba(var(--primary),0.3)] hover:scale-105"
+            }`}
+          >
+            {isProcessing ? (
+              <Loader2 className="w-12 h-12 text-muted-foreground animate-spin" />
+            ) : (
+              <Mic className="w-12 h-12 text-white" />
+            )}
+            
+            {/* Ripple effect when listening */}
+            {isListening && (
+              <>
+                <span className="absolute inset-0 rounded-full border-4 border-red-500 animate-ping opacity-75"></span>
+                <span className="absolute inset-[-20px] rounded-full border-2 border-red-500/50 animate-ping opacity-50" style={{ animationDelay: "0.2s" }}></span>
+              </>
+            )}
+          </button>
+
+          {/* Transcript Display */}
+          <div className="h-16 flex items-center justify-center text-center px-6">
+            {transcript && !parsedData && !isProcessing && (
+              <p className="text-lg font-medium text-foreground italic">"{transcript}"</p>
+            )}
+            {isProcessing && (
+              <p className="text-sm font-medium text-primary flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin" /> Processing with AI...
+              </p>
+            )}
+          </div>
+
+          {/* Parsed Data Card */}
+          {parsedData && !isProcessing && (
+            <div className="w-full max-w-sm mt-8 animate-fade-up">
+              <div className="bg-card rounded-2xl border card-shadow-md p-5 mb-4 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-primary/20 to-transparent rounded-bl-full -z-10" />
+                
+                <div className="flex items-center gap-2 mb-4">
+                  <div className={`p-2 rounded-lg ${parsedData.type === 'sale' ? 'bg-blue-100 text-blue-600' : 'bg-green-100 text-green-600'}`}>
+                    <Package className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-bold text-heading text-lg capitalize">
+                    {parsedData.type || "Unknown Entry"}
+                  </h3>
+                </div>
+
+                <div className="space-y-3">
+                  <DetailRow label="Product" value={parsedData.product} />
+                  <DetailRow 
+                    label="Quantity" 
+                    value={parsedData.quantity ? `${parsedData.quantity} ${parsedData.unit || ''}` : null} 
+                  />
+                  <DetailRow 
+                    label="Price" 
+                    value={parsedData.price ? `₹${parsedData.price}` : null} 
+                  />
+                </div>
+              </div>
+
+              {!parsedData.product || (!parsedData.quantity && !parsedData.price) ? (
+                <div className="flex items-start gap-2 p-3 bg-red-50 text-red-600 rounded-xl mb-4 text-sm">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <p>Could not extract complete details. Please try speaking clearly again.</p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleSave}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-auth text-white py-4 rounded-xl font-bold text-base card-shadow-md lift active:scale-[0.98]"
+                >
+                  <Check className="w-5 h-5" />
+                  Save Entry
+                </button>
+              )}
+            </div>
+          )}
+
+        </div>
+      </div>
+    </AppShell>
+  );
+}
+
+function DetailRow({ label, value }: { label: string; value: string | null | undefined }) {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between items-center pb-2 border-b border-border/50 last:border-0 last:pb-0">
+      <span className="text-sm text-muted-foreground">{label}</span>
+      <span className="text-sm font-semibold text-foreground capitalize">{value}</span>
+    </div>
+  );
+}
