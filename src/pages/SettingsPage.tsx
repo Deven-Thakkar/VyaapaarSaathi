@@ -1,8 +1,10 @@
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
-import { User, Building2, Globe, LogOut, Pencil } from "lucide-react";
+import { User, Building2, Globe, LogOut, Pencil, Wallet, Check, X } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useProfile, FinancialProfile } from "@/context/ProfileContext";
 
 const langs = [
   { code: "en", label: "English" },
@@ -13,6 +15,9 @@ const langs = [
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const { profile, updateProfile } = useProfile();
+
+  const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
   return (
     <AppShell>
@@ -23,11 +28,11 @@ export default function SettingsPage() {
         <div className="bg-card rounded-2xl card-shadow-md p-5 mb-4">
           <div className="flex items-center gap-4">
             <div className="w-16 h-16 rounded-full bg-gradient-auth text-primary-foreground flex items-center justify-center text-2xl font-extrabold">
-              R
+              {profile.name.charAt(0)}
             </div>
             <div className="flex-1">
-              <p className="text-base font-bold text-heading">Rahul Sharma</p>
-              <p className="text-xs text-muted-foreground">+91 98765 43210</p>
+              <p className="text-base font-bold text-heading">{profile.name}</p>
+              <p className="text-xs text-muted-foreground">{profile.phone}</p>
             </div>
             <button className="p-2 rounded-lg bg-accent text-primary hover:bg-accent/80 transition-colors" aria-label={t("settings.edit")}>
               <Pencil className="w-4 h-4" />
@@ -37,9 +42,17 @@ export default function SettingsPage() {
 
         {/* Business */}
         <Section title={t("settings.business")} icon={<Building2 className="w-4 h-4" />}>
-          <Row label="Business Name" value="Sharma General Store" />
-          <Row label="Type" value="Retail / Kirana" />
-          <Row label="Monthly Revenue" value="₹2,85,000" />
+          <Row label={t("settings.businessName")} value={profile.businessName} />
+          <Row label={t("settings.businessTypeLabel")} value={profile.businessType} />
+          <Row label={t("settings.monthlyRevenueLabel")} value={fmt(profile.monthlyRevenue)} />
+        </Section>
+
+        {/* Editable financials */}
+        <Section title={t("settings.financials")} icon={<Wallet className="w-4 h-4" />}>
+          <EditRow label={t("auth.stock")} field="stock" value={profile.stock} onSave={updateProfile} />
+          <EditRow label={t("auth.salaries")} field="salaries" value={profile.salaries} onSave={updateProfile} />
+          <EditRow label={t("auth.rent")} field="rent" value={profile.rent} onSave={updateProfile} />
+          <EditRow label={t("auth.utilities")} field="utilities" value={profile.utilities} onSave={updateProfile} />
         </Section>
 
         {/* Language */}
@@ -63,9 +76,9 @@ export default function SettingsPage() {
 
         {/* Profile section */}
         <Section title={t("settings.profile")} icon={<User className="w-4 h-4" />}>
-          <Row label="Name" value="Rahul Sharma" />
-          <Row label="Phone" value="+91 98765 43210" />
-          <Row label="Email" value="rahul@example.com" />
+          <Row label="Name" value={profile.name} />
+          <Row label="Phone" value={profile.phone} />
+          <Row label="Email" value={profile.email} />
         </Section>
 
         <button
@@ -96,6 +109,68 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex items-center justify-between py-1.5 border-b border-border/60 last:border-0">
       <span className="text-xs text-muted-foreground">{label}</span>
       <span className="text-sm font-semibold text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function EditRow({
+  label,
+  field,
+  value,
+  onSave,
+}: {
+  label: string;
+  field: keyof FinancialProfile;
+  value: number;
+  onSave: (patch: Partial<FinancialProfile>) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(String(value));
+
+  const save = () => {
+    onSave({ [field]: Number(draft) || 0 } as Partial<FinancialProfile>);
+    setEditing(false);
+  };
+
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-border/60 last:border-0 gap-2">
+      <span className="text-xs text-muted-foreground shrink-0">{label}</span>
+      {editing ? (
+        <div className="flex items-center gap-1.5 flex-1 justify-end">
+          <input
+            type="tel"
+            inputMode="numeric"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.replace(/\D/g, ""))}
+            className="w-28 bg-muted rounded-lg px-2.5 py-1.5 text-sm font-semibold text-foreground outline-none focus:ring-2 focus:ring-primary text-right"
+            autoFocus
+          />
+          <button onClick={save} className="p-1.5 rounded-lg bg-success/10 text-success hover:bg-success/20" aria-label="Save">
+            <Check className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={() => {
+              setDraft(String(value));
+              setEditing(false);
+            }}
+            className="p-1.5 rounded-lg bg-muted text-muted-foreground hover:bg-accent"
+            aria-label="Cancel"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={() => {
+            setDraft(String(value));
+            setEditing(true);
+          }}
+          className="flex items-center gap-1.5 group"
+        >
+          <span className="text-sm font-semibold text-foreground">₹{value.toLocaleString("en-IN")}</span>
+          <Pencil className="w-3 h-3 text-muted-foreground group-hover:text-primary" />
+        </button>
+      )}
     </div>
   );
 }
