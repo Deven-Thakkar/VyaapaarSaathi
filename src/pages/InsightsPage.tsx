@@ -3,6 +3,7 @@ import PageHeader from "@/components/PageHeader";
 import { useTranslation } from "react-i18next";
 import { Sparkles, TrendingUp, AlertCircle, AlertTriangle } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
+import { useProfile } from "@/context/ProfileContext";
 
 const forecastData = [
   ...Array.from({ length: 30 }, (_, i) => ({
@@ -22,13 +23,7 @@ const profitData = [
   { m: "Apr", v: 18 }, { m: "May", v: 22 }, { m: "Jun", v: 26 }, { m: "Jul", v: 28 },
 ];
 
-const expenseData = [
-  { name: "Stock", value: 45 },
-  { name: "Rent", value: 20 },
-  { name: "Salary", value: 18 },
-  { name: "Others", value: 17 },
-];
-const PIE_COLORS = ["hsl(217 91% 60%)", "hsl(142 71% 45%)", "hsl(38 92% 50%)", "hsl(215 16% 47%)"];
+const PIE_COLORS = ["hsl(217 91% 60%)", "hsl(142 71% 45%)", "hsl(38 92% 50%)", "hsl(262 83% 58%)"];
 
 const topProducts = [
   { name: "Sunflower Oil", units: 260 },
@@ -78,6 +73,15 @@ const toneStyles: Record<Tone, { dot: string; border: string; bg: string; text: 
 
 export default function InsightsPage() {
   const { t } = useTranslation();
+  const { profile } = useProfile();
+
+  const expenseData = [
+    { name: t("auth.stock"), value: profile.stock },
+    { name: t("auth.salaries"), value: profile.salaries },
+    { name: t("auth.rent"), value: profile.rent },
+    { name: t("auth.utilities"), value: profile.utilities },
+  ];
+  const totalExpense = expenseData.reduce((s, d) => s + d.value, 0) || 1;
 
   return (
     <AppShell>
@@ -157,15 +161,15 @@ export default function InsightsPage() {
                   <Pie data={expenseData} dataKey="value" innerRadius={32} outerRadius={62} paddingAngle={2}>
                     {expenseData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: number) => `₹${v.toLocaleString("en-IN")}`} />
                 </PieChart>
               </ResponsiveContainer>
               <ul className="flex-1 space-y-2 text-[11px]">
                 {expenseData.map((d, i) => (
                   <li key={d.name} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i] }} />
-                    <span className="text-muted-foreground">{d.name}</span>
-                    <span className="ml-auto font-semibold text-foreground">{d.value}%</span>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i] }} />
+                    <span className="text-muted-foreground truncate">{d.name}</span>
+                    <span className="ml-auto font-semibold text-foreground">{Math.round((d.value / totalExpense) * 100)}%</span>
                   </li>
                 ))}
               </ul>

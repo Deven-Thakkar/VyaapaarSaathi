@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ProfileProvider } from "./context/ProfileContext";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
 import AddPage from "./pages/AddPage";
@@ -21,25 +22,27 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/home" element={<HomePage />} />
-          <Route path="/insights" element={<InsightsPage />} />
-          <Route path="/add" element={<AddPage />} />
-          <Route path="/sales" element={<SalesPage />} />
-          <Route path="/inventory" element={<InventoryPage />} />
-          <Route path="/inventory/:id" element={<ProductDetailPage />} />
-          <Route path="/udhaari" element={<UdhaariPage />} />
-          <Route path="/transactions" element={<TransactionsPage />} />
-          <Route path="/ai" element={<AiPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <ProfileProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/home" element={<HomePage />} />
+            <Route path="/insights" element={<InsightsPage />} />
+            <Route path="/add" element={<AddPage />} />
+            <Route path="/sales" element={<SalesPage />} />
+            <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/inventory/:id" element={<ProductDetailPage />} />
+            <Route path="/udhaari" element={<UdhaariPage />} />
+            <Route path="/transactions" element={<TransactionsPage />} />
+            <Route path="/ai" element={<AiPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </ProfileProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

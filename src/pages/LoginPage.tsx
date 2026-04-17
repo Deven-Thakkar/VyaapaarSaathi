@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, ArrowRight, Sparkles, User, Building2, IndianRupee, Target, TrendingUp } from "lucide-react";
+import { Phone, ArrowRight, Sparkles, User, Building2, IndianRupee, Target, TrendingUp, Package, Users, Home as HomeIcon, Zap } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useProfile } from "@/context/ProfileContext";
 
 type Tab = "login" | "signup";
 
 export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { updateProfile } = useProfile();
   const [tab, setTab] = useState<Tab>("login");
 
   // login state
@@ -22,6 +24,10 @@ export default function LoginPage() {
   const [revenue, setRevenue] = useState("");
   const [investment, setInvestment] = useState("");
   const [goal, setGoal] = useState("");
+  const [stock, setStock] = useState("");
+  const [salaries, setSalaries] = useState("");
+  const [rent, setRent] = useState("");
+  const [utilities, setUtilities] = useState("");
 
   const bizTypes = [
     { v: "kirana", l: t("auth.bizTypes.kirana") },
@@ -31,6 +37,21 @@ export default function LoginPage() {
     { v: "manufacturing", l: t("auth.bizTypes.manufacturing") },
     { v: "others", l: t("auth.bizTypes.others") },
   ];
+
+  const handleSignup = () => {
+    updateProfile({
+      name: name || "Rahul Sharma",
+      businessType: bizType,
+      monthlyRevenue: Number(revenue) || 0,
+      investment: Number(investment) || 0,
+      goal,
+      stock: Number(stock) || 0,
+      salaries: Number(salaries) || 0,
+      rent: Number(rent) || 0,
+      utilities: Number(utilities) || 0,
+    });
+    navigate("/home");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-auth flex flex-col items-center justify-center p-4 relative">
@@ -116,7 +137,7 @@ export default function LoginPage() {
               )}
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 scrollbar-hide">
               <Field icon={<User className="w-4 h-4" />} label={t("auth.name")}>
                 <input
                   value={name}
@@ -138,24 +159,10 @@ export default function LoginPage() {
                 </select>
               </Field>
               <Field icon={<IndianRupee className="w-4 h-4" />} label={t("auth.monthlyRevenue")}>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={revenue}
-                  onChange={(e) => setRevenue(e.target.value.replace(/\D/g, ""))}
-                  placeholder={t("auth.monthlyRevenuePh")}
-                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
-                />
+                <NumInput value={revenue} setValue={setRevenue} placeholder={t("auth.monthlyRevenuePh")} />
               </Field>
               <Field icon={<TrendingUp className="w-4 h-4" />} label={t("auth.investment")}>
-                <input
-                  type="tel"
-                  inputMode="numeric"
-                  value={investment}
-                  onChange={(e) => setInvestment(e.target.value.replace(/\D/g, ""))}
-                  placeholder={t("auth.investmentPh")}
-                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
-                />
+                <NumInput value={investment} setValue={setInvestment} placeholder={t("auth.investmentPh")} />
               </Field>
               <Field icon={<Target className="w-4 h-4" />} label={t("auth.goal")}>
                 <input
@@ -165,10 +172,27 @@ export default function LoginPage() {
                   className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
                 />
               </Field>
-              <PrimaryBtn
-                onClick={() => navigate("/home")}
-                disabled={!name || !bizType || !revenue}
-              >
+
+              <div className="pt-2 pb-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-primary">
+                  {t("auth.financials")}
+                </p>
+              </div>
+
+              <Field icon={<Package className="w-4 h-4" />} label={t("auth.stock")}>
+                <NumInput value={stock} setValue={setStock} placeholder={t("auth.stockPh")} />
+              </Field>
+              <Field icon={<Users className="w-4 h-4" />} label={t("auth.salaries")}>
+                <NumInput value={salaries} setValue={setSalaries} placeholder={t("auth.salariesPh")} />
+              </Field>
+              <Field icon={<HomeIcon className="w-4 h-4" />} label={t("auth.rent")}>
+                <NumInput value={rent} setValue={setRent} placeholder={t("auth.rentPh")} />
+              </Field>
+              <Field icon={<Zap className="w-4 h-4" />} label={t("auth.utilities")}>
+                <NumInput value={utilities} setValue={setUtilities} placeholder={t("auth.utilitiesPh")} />
+              </Field>
+
+              <PrimaryBtn onClick={handleSignup} disabled={!name || !bizType || !revenue}>
                 {t("auth.cont")} <ArrowRight className="w-4 h-4" />
               </PrimaryBtn>
             </div>
@@ -176,6 +200,19 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function NumInput({ value, setValue, placeholder }: { value: string; setValue: (v: string) => void; placeholder: string }) {
+  return (
+    <input
+      type="tel"
+      inputMode="numeric"
+      value={value}
+      onChange={(e) => setValue(e.target.value.replace(/\D/g, ""))}
+      placeholder={placeholder}
+      className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+    />
   );
 }
 
