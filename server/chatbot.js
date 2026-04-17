@@ -77,36 +77,32 @@ export function createChatbotRouter() {
       const { message, business_id } = req.body;
       const lowerMsg = message.toLowerCase();
 
-      // 0. ML PREDICTION
+      // 0. ML PREDICTION / BUSINESS KAISA CHAL RAHA HAI
       if (
         lowerMsg.includes("predict") || 
         lowerMsg.includes("future") || 
         lowerMsg.includes("risk") || 
         lowerMsg.includes("cashflow") || 
-        lowerMsg.includes("run out of money")
+        lowerMsg.includes("run out of money") ||
+        lowerMsg.includes("kaisa chal raha") ||
+        lowerMsg.includes("business")
       ) {
-        // Fallback to mock data if real aggregated DB data isn't ready
-        const payload = {
-          sales: 12450,
-          expenses: 8000,
-          cash_balance: 50000,
-          udhaar_given: 23300,
-          udhaar_collected: 5000,
-          inventory_value: 150000
-        };
-
         try {
           const mlResponse = await fetch("http://localhost:5000/api/predict", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify({ business_id })
           });
           
           if (!mlResponse.ok) throw new Error("ML service failed");
           const mlData = await mlResponse.json();
           
+          if (!mlData.meta.has_data) {
+             return res.json({ reply: "No data available yet" });
+          }
+
           let insight = "✅ Business looks stable";
-          if (mlData.cashflow_prediction < payload.expenses) {
+          if (mlData.cashflow_prediction < mlData.meta.expenses) {
             insight = "⚠️ You may face a cash shortage soon";
           } else if (mlData.risk_prediction > 0.5) {
             insight = "🚨 High risk detected. Reduce expenses or collect payments";
@@ -121,6 +117,8 @@ STRICT RULES:
 - Be natural and professional
 
 Data:
+Sales: ₹${mlData.meta.sales}
+Expenses: ₹${mlData.meta.expenses}
 Cashflow Prediction: ₹${Math.round(mlData.cashflow_prediction)}
 Risk: ${mlData.risk_prediction > 0.5 ? 'High' : 'Low'}
 System Insight: ${insight}
@@ -216,6 +214,46 @@ Final answer:
         return res.json({ reply: aiReply });
       }
 
+      // 2.5 INVENTORY / STOCK
+      if (lowerMsg.includes("stock") || lowerMsg.includes("inventory") || lowerMsg.includes("items") || lowerMsg.includes("product") || lowerMsg.includes("bache") || lowerMsg.includes("bacha")) {
+        try {
+          const insightsRes = await fetch("http://localhost:5000/api/insights-data", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ business_id })
+          });
+          
+          if (!insightsRes.ok) throw new Error("Insights API failed");
+          const insightsData = await insightsRes.json();
+          
+          if (!insightsData.summary.has_data) {
+             return res.json({ reply: "Inventory details not available yet." });
+          }
+
+          const totalStock = insightsData.top_products.reduce((sum, p) => sum + p.units, 0);
+          
+          const aiReply = await generateAIResponse(`
+You are a helpful assistant for Indian business owners managing their inventory.
+
+STRICT RULES:
+- Clean Hinglish (no broken words)
+- Keep it short (2 lines max)
+- Be accurate based on the Data provided
+
+Data:
+Total Stock Units: ${totalStock}
+
+User question:
+${message}
+
+Final answer:
+`);
+          return res.json({ reply: aiReply });
+        } catch (e) {
+          console.error("Inventory Fetch Error:", e);
+        }
+      }
+
       // 3. DEFAULT
       const aiReply = await generateAIResponse(`
 You are a helpful assistant for Indian business owners.
@@ -301,38 +339,26 @@ Final answer:
         console.log("Could not fetch user phone, using fallback.");
       }
 
-      // 2. Fetch/Derive Data
-      let salesTotal = 0;
-      let expensesTotal = 0;
-      let udhaarTotal = 0;
-
-      // Udhaar
+      // 2. Fetch Real Data via Predict API
+      let mlData = null;
       try {
-        const { data: udhaarData, error: udhaarError } = await supabase
-          .from("udhaar_records")
-          .select("amount_remaining")
-          .eq("business_id", business_id);
-
-        if (!udhaarError && udhaarData) {
-          udhaarTotal = udhaarData.reduce((sum, item) => sum + Number(item.amount_remaining), 0);
-        } else {
-          udhaarTotal = 23300; // Mock fallback
-        }
+        const mlRes = await fetch("http://localhost:5000/api/predict", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ business_id })
+        });
+        if (mlRes.ok) mlData = await mlRes.json();
       } catch (e) {
-        udhaarTotal = 23300;
+        console.error("Failed to fetch ML data for WhatsApp:", e);
       }
 
-      // Sales & Expenses (Mocking if tables don't exist as per fallback requirement)
-      if (type === "daily") {
-        salesTotal = 12450;
-        expensesTotal = 8000;
-      } else if (type === "weekly") {
-        salesTotal = 85000;
-        expensesTotal = 56000;
-      } else if (type === "monthly") {
-        salesTotal = 320000;
-        expensesTotal = 210000;
+      if (!mlData || !mlData.meta.has_data) {
+        return res.json({ success: true, reply: "No data available yet" });
       }
+
+      const salesTotal = mlData.meta.sales;
+      const expensesTotal = mlData.meta.expenses;
+      const udhaarTotal = mlData.meta.udhaar_given;
 
       // 3. Strict AI Prompt
       const prompt = `You are a financial assistant for small Indian businesses.
@@ -340,16 +366,17 @@ Final answer:
 Data:
 Sales: ₹${salesTotal}
 Expenses: ₹${expensesTotal}
-Udhaar: ₹${udhaarTotal}
+Cashflow: ₹${salesTotal - expensesTotal}
+Udhaar Pending: ₹${udhaarTotal}
 
 Generate:
 - Hinglish
 - 2–3 lines max
-- Include 1 actionable suggestion
+- Include 1 actionable insight based on the data
 - Friendly tone
 
 Example:
-"Aaj ₹12,000 ki bikri hui 👍 par ₹8,000 kharcha gaya. Udhaar ₹23,000 pending hai. Sharma ji ko follow up karo."
+"📊 Aaj ka sales ₹5000 hai, expenses ₹3000. ⚠️ ₹8000 udhaar pending hai — follow up karein."
 
 Generate the insight now:`;
 

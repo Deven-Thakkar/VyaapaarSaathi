@@ -19,6 +19,8 @@ interface PredictResponse {
     overdue_udhaar: number;
     inventory_value: number;
     has_data: boolean;
+    missing_data?: string[];
+    is_synthetic?: boolean;
   };
 }
 
@@ -85,38 +87,56 @@ export default function SmartInsights() {
 
   if (!data) return null;
 
+  if (!data.meta.has_data) {
+    return (
+      <div className="bg-card border rounded-2xl p-8 text-center card-shadow">
+        <Info className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+        <h3 className="text-base font-bold text-heading mb-2">No transactions found</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Add sales or expenses to see insights.
+        </p>
+        <div className="text-xs text-muted-foreground bg-muted p-3 rounded-lg text-left inline-block">
+          <p className="font-semibold mb-1">Missing data:</p>
+          <ul className="list-disc pl-4 space-y-0.5">
+            {data.meta.missing_data?.map((m: string) => <li key={m}>{m}</li>)}
+          </ul>
+        </div>
+        <div className="mt-4">
+            <button onClick={fetchInsights} className="p-1.5 rounded-lg hover:bg-accent transition-colors flex items-center gap-1 mx-auto text-xs text-muted-foreground">
+              <RefreshCw className="w-4 h-4" /> Refresh
+            </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="bg-card border rounded-2xl p-5 card-shadow">
+    <div className="bg-card border rounded-2xl p-5 card-shadow flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-2">
         <TrendingUp className="w-5 h-5 text-primary" />
         <h3 className="text-base font-bold text-heading flex-1">Business Insights</h3>
         <span className="text-[10px] font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">AI Powered</span>
-        {!data.meta.has_data && (
-          <span className="text-[10px] font-semibold text-muted-foreground bg-muted px-2 py-0.5 rounded-full">No Data Yet</span>
-        )}
         <button onClick={fetchInsights} className="p-1 rounded-lg hover:bg-accent transition-colors ml-1">
           <RefreshCw className="w-3.5 h-3.5 text-muted-foreground" />
         </button>
       </div>
-
+      
       {/* Real data summary */}
-      {data.meta.has_data && (
-        <div className="grid grid-cols-3 gap-2 mb-4">
-          <div className="bg-muted/40 p-2 rounded-xl text-center">
-            <p className="text-[9px] text-muted-foreground uppercase font-semibold mb-0.5">Sales</p>
-            <p className="text-sm font-bold text-success">₹{data.meta.sales.toLocaleString('en-IN')}</p>
-          </div>
-          <div className="bg-muted/40 p-2 rounded-xl text-center">
-            <p className="text-[9px] text-muted-foreground uppercase font-semibold mb-0.5">Expenses</p>
-            <p className="text-sm font-bold text-destructive">₹{data.meta.expenses.toLocaleString('en-IN')}</p>
-          </div>
-          <div className="bg-muted/40 p-2 rounded-xl text-center">
-            <p className="text-[9px] text-muted-foreground uppercase font-semibold mb-0.5">Udhaar</p>
-            <p className="text-sm font-bold text-warning">₹{data.meta.udhaar_given.toLocaleString('en-IN')}</p>
-          </div>
+      <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="bg-muted/40 p-2 rounded-xl text-center">
+          <p className="text-[9px] text-muted-foreground uppercase font-semibold mb-0.5">Sales</p>
+          <p className="text-sm font-bold text-success">₹{data.meta.sales.toLocaleString('en-IN')}</p>
         </div>
-      )}
+        <div className="bg-muted/40 p-2 rounded-xl text-center">
+          <p className="text-[9px] text-muted-foreground uppercase font-semibold mb-0.5">Expenses</p>
+          <p className="text-sm font-bold text-destructive">₹{data.meta.expenses.toLocaleString('en-IN')}</p>
+        </div>
+        <div className="bg-muted/40 p-2 rounded-xl text-center">
+          <p className="text-[9px] text-muted-foreground uppercase font-semibold mb-0.5">Udhaar</p>
+          <p className="text-sm font-bold text-warning">₹{data.meta.udhaar_given.toLocaleString('en-IN')}</p>
+        </div>
+      </div>
 
       {/* ML Prediction cards */}
       <div className="grid grid-cols-2 gap-3 mb-4">

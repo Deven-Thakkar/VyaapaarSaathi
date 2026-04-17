@@ -1,105 +1,64 @@
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { useTranslation } from "react-i18next";
-import { Sparkles, TrendingUp, AlertCircle, AlertTriangle, Download, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Download, Loader2, Info, CheckCircle2, TrendingUp, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
+import { LineChart, Line, AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
 import { useProfile } from "@/context/ProfileContext";
 
-const forecastData = [
-  ...Array.from({ length: 30 }, (_, i) => ({
-    d: `D${i + 1}`,
-    actual: i < 18 ? Math.round(10000 + Math.sin(i / 3) * 2500 + i * 220) : null,
-    predicted: i >= 17 ? Math.round(10000 + Math.sin(i / 3) * 2500 + i * 220 + (i - 17) * 350) : null,
-  })),
-];
-
-const revenueData = [
-  { m: "Jan", v: 65000 }, { m: "Feb", v: 72000 }, { m: "Mar", v: 68000 },
-  { m: "Apr", v: 85000 }, { m: "May", v: 92000 }, { m: "Jun", v: 105000 }, { m: "Jul", v: 118000 },
-];
-
-const profitData = [
-  { m: "Jan", v: 12 }, { m: "Feb", v: 15 }, { m: "Mar", v: 11 },
-  { m: "Apr", v: 18 }, { m: "May", v: 22 }, { m: "Jun", v: 26 }, { m: "Jul", v: 28 },
-];
-
 const PIE_COLORS = ["hsl(217 91% 60%)", "hsl(142 71% 45%)", "hsl(38 92% 50%)", "hsl(262 83% 58%)"];
-
-const topProducts = [
-  { name: "Sunflower Oil", units: 260 },
-  { name: "Basmati Rice", units: 215 },
-  { name: "Sugar 1kg", units: 180 },
-  { name: "Tata Salt", units: 145 },
-  { name: "Maggi", units: 120 },
-];
-
-type Tone = "success" | "warning" | "danger";
-
-const recommendations: Array<{
-  tone: Tone;
-  title: string;
-  metrics: string[];
-  reason: string;
-  action: string;
-}> = [
-  {
-    tone: "success",
-    title: "Restock Sunflower Oil",
-    metrics: ["Sales ↑ 24% (210 → 260 units)", "Stock left: 90 units (~2.5 days)"],
-    reason: "Rising demand + low stock → risk of lost sales (~₹20K)",
-    action: "Restock 300+ units this week",
-  },
-  {
-    tone: "warning",
-    title: "Collect from Suman Kirana",
-    metrics: ["Due: ₹12,400 (overdue 3 days)", "21% of total receivables"],
-    reason: "Delayed cash hurting working capital",
-    action: "Follow up now (AI/voice reminder)",
-  },
-  {
-    tone: "danger",
-    title: "Review Sugar Supplier",
-    metrics: ["Margin ↓ 6% (18% → 12%)", "Cost ↑ ₹38 → ₹42/kg", "Loss: ~₹800/week"],
-    reason: "Rising cost, same selling price",
-    action: "Negotiate / switch supplier / increase price",
-  },
-];
-
-const toneStyles: Record<Tone, { dot: string; border: string; bg: string; text: string; icon: any }> = {
-  success: { dot: "bg-success", border: "border-success", bg: "bg-success/10", text: "text-success", icon: TrendingUp },
-  warning: { dot: "bg-warning", border: "border-warning", bg: "bg-warning/10", text: "text-warning", icon: AlertCircle },
-  danger: { dot: "bg-destructive", border: "border-destructive", bg: "bg-destructive/10", text: "text-destructive", icon: AlertTriangle },
-};
 
 export default function InsightsPage() {
   const { t } = useTranslation();
   const { profile } = useProfile();
 
-  const expenseData = [
-    { name: t("auth.stock"), value: profile.stock },
-    { name: t("auth.salaries"), value: profile.salaries },
-    { name: t("auth.rent"), value: profile.rent },
-    { name: t("auth.utilities"), value: profile.utilities },
-  ];
-  const totalExpense = expenseData.reduce((s, d) => s + d.value, 0) || 1;
-
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [data, setData] = useState<any>(null);
+  const [predictData, setPredictData] = useState<any>(null);
   const [generating, setGenerating] = useState(false);
 
+  useEffect(() => {
+    setLoading(true);
+    const body = JSON.stringify({ business_id: profile?.business_id ?? null });
+
+    Promise.all([
+      fetch("/api/insights-data", { method: "POST", headers: { "Content-Type": "application/json" }, body }).then(res => {
+        if (!res.ok) throw new Error("Failed to load chart data");
+        return res.json();
+      }),
+      fetch("/api/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body }).then(res => {
+        if (!res.ok) throw new Error("Failed to load predict data");
+        return res.json();
+      })
+    ])
+    .then(([chartData, predictData]) => {
+      setData(chartData);
+      setPredictData(predictData);
+      setLoading(false);
+    })
+    .catch(e => {
+      setError(e.message);
+      setLoading(false);
+    });
+  }, [profile?.business_id]);
+
   const handleDownload = () => {
+    if (!data) return;
     setGenerating(true);
     setTimeout(() => {
       const lines = [
         "VyapaarSaathi — Business Insights Report",
         `Generated: ${new Date().toLocaleString("en-IN")}`,
         "",
-        "Monthly Expense Breakdown:",
-        ...expenseData.map((e) => `  ${e.name}: ₹${e.value.toLocaleString("en-IN")}`),
-        `  Total: ₹${totalExpense.toLocaleString("en-IN")}`,
+        "Summary (Last 30 Days):",
+        `  Sales: ₹${data.summary.sales_30d.toLocaleString("en-IN")}`,
+        `  Expenses: ₹${data.summary.expenses_30d.toLocaleString("en-IN")}`,
+        `  Net: ₹${data.summary.net_30d.toLocaleString("en-IN")}`,
         "",
-        "Top Products (units sold):",
-        ...topProducts.map((p) => `  ${p.name}: ${p.units}`),
+        "Top Products (units in stock):",
+        ...data.top_products.map((p: any) => `  ${p.name}: ${p.units}`),
       ].join("\n");
       const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
       const url = URL.createObjectURL(blob);
@@ -115,10 +74,127 @@ export default function InsightsPage() {
     }, 900);
   };
 
+  if (loading) {
+    return (
+      <AppShell>
+        <div className="max-w-6xl mx-auto p-4 lg:p-6 flex items-center justify-center min-h-[50vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppShell>
+        <div className="max-w-6xl mx-auto p-4 lg:p-6">
+          <PageHeader title={t("insightsPage.title")} subtitle={t("insightsPage.sub")} />
+          <div className="bg-destructive/10 text-destructive p-4 rounded-xl">
+            {error}
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
+  const { daily_cashflow, monthly_revenue, top_products, summary } = data;
+
+  if (!summary.has_data && !summary.is_synthetic) {
+    return (
+      <AppShell>
+        <div className="max-w-6xl mx-auto p-4 lg:p-6">
+          <PageHeader title={t("insightsPage.title")} subtitle={t("insightsPage.sub")} />
+          <div className="bg-card border border-border rounded-2xl p-8 text-center mt-8 card-shadow">
+            <Info className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <h2 className="text-xl font-bold text-heading mb-2">No data yet</h2>
+            <p className="text-muted-foreground">
+              No transactions found. Add sales or expenses to see insights.
+            </p>
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <div className="max-w-6xl mx-auto p-4 lg:p-6">
         <PageHeader title={t("insightsPage.title")} subtitle={t("insightsPage.sub")} />
+
+        {/* ML Prediction Cards (if predictData exists) */}
+        {predictData && (
+          <div className="mb-6 space-y-4">
+            <h3 className="text-sm font-bold text-heading flex items-center gap-2">
+              <span className="text-xl">✨</span> AI Future Insights
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-primary/10 to-primary/5 border border-primary/20 rounded-2xl p-5 card-shadow relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 rounded-full blur-2xl group-hover:bg-primary/20 transition-all duration-500"></div>
+                <h3 className="text-xs font-bold text-primary uppercase tracking-wide mb-2 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4" /> 30-Day Cashflow Forecast
+                </h3>
+                <p className="text-3xl font-black text-heading">
+                  ₹{Math.max(0, Math.round(predictData.cashflow_prediction)).toLocaleString('en-IN')}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Projected balance based on historical run rates and current stock.
+                </p>
+              </div>
+              
+              <div className={`bg-gradient-to-br border rounded-2xl p-5 card-shadow relative overflow-hidden group ${
+                predictData.risk_prediction > 0.65 ? 'from-red-50 to-red-100/50 border-red-200' : 
+                predictData.risk_prediction > 0.35 ? 'from-amber-50 to-amber-100/50 border-amber-200' : 
+                'from-green-50 to-green-100/50 border-green-200'
+              }`}>
+                <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-2xl transition-all duration-500 ${
+                  predictData.risk_prediction > 0.65 ? 'bg-red-500/10 group-hover:bg-red-500/20' : 
+                  predictData.risk_prediction > 0.35 ? 'bg-amber-500/10 group-hover:bg-amber-500/20' : 
+                  'bg-green-500/10 group-hover:bg-green-500/20'
+                }`}></div>
+                <h3 className={`text-xs font-bold uppercase tracking-wide mb-2 flex items-center gap-2 ${
+                  predictData.risk_prediction > 0.65 ? 'text-red-700' : 
+                  predictData.risk_prediction > 0.35 ? 'text-amber-700' : 
+                  'text-green-700'
+                }`}>
+                  <AlertTriangle className="w-4 h-4" /> Financial Risk Assessment
+                </h3>
+                <p className={`text-3xl font-black ${
+                  predictData.risk_prediction > 0.65 ? 'text-red-600' : 
+                  predictData.risk_prediction > 0.35 ? 'text-amber-600' : 
+                  'text-green-600'
+                }`}>
+                  {predictData.risk_prediction > 0.65 ? 'High Risk' : predictData.risk_prediction > 0.35 ? 'Medium Risk' : 'Low Risk'}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Business stability score: {((1 - predictData.risk_prediction) * 100).toFixed(1)}/100
+                </p>
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              {predictData.insights.map((insight: any, i: number) => {
+                const isSuccess = insight.level === 'success';
+                const isWarning = insight.level === 'warning';
+                const isDanger = insight.level === 'danger';
+                
+                return (
+                  <div key={i} className={`flex items-start gap-3 p-3.5 rounded-xl border ${
+                    isSuccess ? 'bg-green-50 border-green-200 text-green-700' :
+                    isWarning ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                    isDanger ? 'bg-red-50 border-red-200 text-red-700' :
+                    'bg-blue-50 border-blue-200 text-blue-700'
+                  }`}>
+                    <CheckCircle2 className={`w-4 h-4 shrink-0 mt-0.5 ${isSuccess ? 'block' : 'hidden'}`} />
+                    <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${!isSuccess && !isDanger ? 'block' : 'hidden'}`} />
+                    <Info className={`w-4 h-4 shrink-0 mt-0.5 ${isDanger ? 'block' : 'hidden'}`} />
+                    <p className="text-sm font-medium leading-tight">{insight.text}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Download Report button */}
         <button
@@ -139,87 +215,35 @@ export default function InsightsPage() {
           )}
         </button>
 
-        {/* AI Recommendations — placed directly after Download Report */}
-        <div className="mb-5">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-bold text-heading uppercase tracking-wide">{t("insightsPage.aiRecs")}</h2>
-          </div>
-          <div className="space-y-3">
-            {recommendations.map((r, i) => {
-              const s = toneStyles[r.tone];
-              const Icon = s.icon;
-              return (
-                <div
-                  key={i}
-                  className={`bg-card rounded-2xl card-shadow p-4 border-l-4 ${s.border} animate-fade-up`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-xl ${s.bg} ${s.text} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-heading">{r.title}</p>
-                      <ul className="mt-2 space-y-0.5">
-                        {r.metrics.map((m, j) => (
-                          <li key={j} className="text-xs text-foreground/80 flex items-start gap-1.5">
-                            <span className={`mt-1 w-1 h-1 rounded-full ${s.dot} shrink-0`} /> {m}
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="text-[11px] text-muted-foreground mt-2">
-                        <span className="font-semibold">{t("insightsPage.reason")}:</span> {r.reason}
-                      </p>
-                      <p className={`text-[11px] mt-1 font-semibold ${s.text}`}>
-                        {t("insightsPage.action")}: {r.action}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* 30-Day Forecast (NEW) */}
-        <Panel title={t("insightsPage.forecast")} subtitle={t("insightsPage.forecastSub")}>
+        {/* 30-Day Cashflow */}
+        <Panel title={t("insightsPage.forecast")} subtitle="Last 30 days">
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={forecastData} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
+              <AreaChart data={daily_cashflow} margin={{ top: 5, right: 5, bottom: 0, left: -20 }}>
                 <defs>
                   <linearGradient id="actualGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="hsl(217 91% 60%)" stopOpacity={0.4} />
                     <stop offset="100%" stopColor="hsl(217 91% 60%)" stopOpacity={0} />
                   </linearGradient>
-                  <linearGradient id="predGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(142 71% 45%)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="hsl(142 71% 45%)" stopOpacity={0} />
-                  </linearGradient>
                 </defs>
                 <CartesianGrid stroke="hsl(220 13% 91%)" strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="d" tick={{ fontSize: 9, fill: "hsl(215 16% 47%)" }} axisLine={false} tickLine={false} interval={4} />
-                <YAxis tick={{ fontSize: 9, fill: "hsl(215 16% 47%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 1000}K`} />
+                <YAxis tick={{ fontSize: 9, fill: "hsl(215 16% 47%)" }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(1)}K`} />
                 <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid hsl(220 13% 91%)", fontSize: 12 }} />
-                <ReferenceLine x="D18" stroke="hsl(215 16% 47%)" strokeDasharray="4 4" label={{ value: "Today", fontSize: 10, fill: "hsl(215 16% 47%)" }} />
-                <Area type="monotone" dataKey="actual" stroke="hsl(217 91% 60%)" strokeWidth={2.5} fill="url(#actualGrad)" connectNulls={false} />
-                <Area type="monotone" dataKey="predicted" stroke="hsl(142 71% 45%)" strokeWidth={2.5} strokeDasharray="6 4" fill="url(#predGrad)" connectNulls={false} />
+                <Area type="monotone" dataKey="net" stroke="hsl(217 91% 60%)" strokeWidth={2.5} fill="url(#actualGrad)" connectNulls={false} />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
-          <div className="flex items-center gap-4 mt-2 text-[11px]">
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-primary" /> Actual</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-success" /> Predicted</span>
           </div>
         </Panel>
 
         <div className="grid lg:grid-cols-2 gap-4 mt-4">
-          <Panel title={t("insightsPage.revenue")} subtitle="Last 7 months">
+          <Panel title={t("insightsPage.revenue")} subtitle="Last 6 months">
             <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={revenueData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
+                <LineChart data={monthly_revenue} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
                   <CartesianGrid stroke="hsl(220 13% 91%)" strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="m" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v / 1000}K`} />
+                  <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${(v / 1000).toFixed(1)}K`} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: number) => `₹${v.toLocaleString("en-IN")}`} />
                   <Line type="monotone" dataKey="v" stroke="hsl(217 91% 60%)" strokeWidth={2.5} dot={{ r: 3 }} />
                 </LineChart>
@@ -227,52 +251,10 @@ export default function InsightsPage() {
             </div>
           </Panel>
 
-          <Panel title={t("insightsPage.profit")} subtitle="% over time">
+          <Panel title={t("insightsPage.topProducts")} subtitle="Stock units (current)">
             <div className="h-44">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={profitData} margin={{ top: 5, right: 5, bottom: 0, left: -25 }}>
-                  <defs>
-                    <linearGradient id="profGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(142 71% 45%)" stopOpacity={0.4} />
-                      <stop offset="100%" stopColor="hsl(142 71% 45%)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="hsl(220 13% 91%)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="m" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} />
-                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: number) => `${v}%`} />
-                  <Area type="monotone" dataKey="v" stroke="hsl(142 71% 45%)" strokeWidth={2.5} fill="url(#profGrad)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </Panel>
-
-          <Panel title={t("insightsPage.expense")} subtitle="By category">
-            <div className="h-44 flex items-center">
-              <ResponsiveContainer width="55%" height="100%">
-                <PieChart>
-                  <Pie data={expenseData} dataKey="value" innerRadius={32} outerRadius={62} paddingAngle={2}>
-                    {expenseData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: number) => `₹${v.toLocaleString("en-IN")}`} />
-                </PieChart>
-              </ResponsiveContainer>
-              <ul className="flex-1 space-y-2 text-[11px]">
-                {expenseData.map((d, i) => (
-                  <li key={d.name} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i] }} />
-                    <span className="text-muted-foreground truncate">{d.name}</span>
-                    <span className="ml-auto font-semibold text-foreground">{Math.round((d.value / totalExpense) * 100)}%</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </Panel>
-
-          <Panel title={t("insightsPage.topProducts")} subtitle="Units sold (30d)">
-            <div className="h-44">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={topProducts} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+                <BarChart data={top_products} layout="vertical" margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                   <XAxis type="number" tick={{ fontSize: 9 }} axisLine={false} tickLine={false} />
                   <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={90} />
                   <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
