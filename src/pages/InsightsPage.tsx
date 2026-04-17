@@ -161,15 +161,15 @@ export default function InsightsPage() {
                   <Pie data={expenseData} dataKey="value" innerRadius={32} outerRadius={62} paddingAngle={2}>
                     {expenseData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
                   </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} />
+                  <Tooltip contentStyle={{ borderRadius: 12, fontSize: 12 }} formatter={(v: number) => `₹${v.toLocaleString("en-IN")}`} />
                 </PieChart>
               </ResponsiveContainer>
               <ul className="flex-1 space-y-2 text-[11px]">
                 {expenseData.map((d, i) => (
                   <li key={d.name} className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: PIE_COLORS[i] }} />
-                    <span className="text-muted-foreground">{d.name}</span>
-                    <span className="ml-auto font-semibold text-foreground">{d.value}%</span>
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: PIE_COLORS[i] }} />
+                    <span className="text-muted-foreground truncate">{d.name}</span>
+                    <span className="ml-auto font-semibold text-foreground">{Math.round((d.value / totalExpense) * 100)}%</span>
                   </li>
                 ))}
               </ul>
