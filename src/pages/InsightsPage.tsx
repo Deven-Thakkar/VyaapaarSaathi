@@ -139,6 +139,48 @@ export default function InsightsPage() {
           )}
         </button>
 
+        {/* AI Recommendations — placed directly after Download Report */}
+        <div className="mb-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-bold text-heading uppercase tracking-wide">{t("insightsPage.aiRecs")}</h2>
+          </div>
+          <div className="space-y-3">
+            {recommendations.map((r, i) => {
+              const s = toneStyles[r.tone];
+              const Icon = s.icon;
+              return (
+                <div
+                  key={i}
+                  className={`bg-card rounded-2xl card-shadow p-4 border-l-4 ${s.border} animate-fade-up`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-9 h-9 rounded-xl ${s.bg} ${s.text} flex items-center justify-center shrink-0`}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-heading">{r.title}</p>
+                      <ul className="mt-2 space-y-0.5">
+                        {r.metrics.map((m, j) => (
+                          <li key={j} className="text-xs text-foreground/80 flex items-start gap-1.5">
+                            <span className={`mt-1 w-1 h-1 rounded-full ${s.dot} shrink-0`} /> {m}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="text-[11px] text-muted-foreground mt-2">
+                        <span className="font-semibold">{t("insightsPage.reason")}:</span> {r.reason}
+                      </p>
+                      <p className={`text-[11px] mt-1 font-semibold ${s.text}`}>
+                        {t("insightsPage.action")}: {r.action}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* 30-Day Forecast (NEW) */}
         <Panel title={t("insightsPage.forecast")} subtitle={t("insightsPage.forecastSub")}>
           <div className="h-56">
@@ -239,48 +281,6 @@ export default function InsightsPage() {
               </ResponsiveContainer>
             </div>
           </Panel>
-        </div>
-
-        {/* AI Recommendations */}
-        <div className="mt-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="w-4 h-4 text-primary" />
-            <h2 className="text-sm font-bold text-heading uppercase tracking-wide">{t("insightsPage.aiRecs")}</h2>
-          </div>
-          <div className="space-y-3">
-            {recommendations.map((r, i) => {
-              const s = toneStyles[r.tone];
-              const Icon = s.icon;
-              return (
-                <div
-                  key={i}
-                  className={`bg-card rounded-2xl card-shadow p-4 border-l-4 ${s.border} animate-fade-up`}
-                >
-                  <div className="flex items-start gap-3">
-                    <div className={`w-9 h-9 rounded-xl ${s.bg} ${s.text} flex items-center justify-center shrink-0`}>
-                      <Icon className="w-5 h-5" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-heading">{r.title}</p>
-                      <ul className="mt-2 space-y-0.5">
-                        {r.metrics.map((m, j) => (
-                          <li key={j} className="text-xs text-foreground/80 flex items-start gap-1.5">
-                            <span className={`mt-1 w-1 h-1 rounded-full ${s.dot} shrink-0`} /> {m}
-                          </li>
-                        ))}
-                      </ul>
-                      <p className="text-[11px] text-muted-foreground mt-2">
-                        <span className="font-semibold">{t("insightsPage.reason")}:</span> {r.reason}
-                      </p>
-                      <p className={`text-[11px] mt-1 font-semibold ${s.text}`}>
-                        {t("insightsPage.action")}: {r.action}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
     </AppShell>
