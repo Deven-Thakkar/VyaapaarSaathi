@@ -1,7 +1,9 @@
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { useTranslation } from "react-i18next";
-import { Sparkles, TrendingUp, AlertCircle, AlertTriangle } from "lucide-react";
+import { Sparkles, TrendingUp, AlertCircle, AlertTriangle, Download, Loader2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
 import { useProfile } from "@/context/ProfileContext";
 
@@ -83,10 +85,59 @@ export default function InsightsPage() {
   ];
   const totalExpense = expenseData.reduce((s, d) => s + d.value, 0) || 1;
 
+  const [generating, setGenerating] = useState(false);
+
+  const handleDownload = () => {
+    setGenerating(true);
+    setTimeout(() => {
+      const lines = [
+        "VyapaarSaathi — Business Insights Report",
+        `Generated: ${new Date().toLocaleString("en-IN")}`,
+        "",
+        "Monthly Expense Breakdown:",
+        ...expenseData.map((e) => `  ${e.name}: ₹${e.value.toLocaleString("en-IN")}`),
+        `  Total: ₹${totalExpense.toLocaleString("en-IN")}`,
+        "",
+        "Top Products (units sold):",
+        ...topProducts.map((p) => `  ${p.name}: ${p.units}`),
+      ].join("\n");
+      const blob = new Blob([lines], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `vyapaarsaathi-report-${Date.now()}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      setGenerating(false);
+      toast.success(t("insightsPage.reportReady"));
+    }, 900);
+  };
+
   return (
     <AppShell>
       <div className="max-w-6xl mx-auto p-4 lg:p-6">
         <PageHeader title={t("insightsPage.title")} subtitle={t("insightsPage.sub")} />
+
+        {/* Download Report button */}
+        <button
+          onClick={handleDownload}
+          disabled={generating}
+          className="w-full mb-5 flex items-center justify-center gap-2.5 bg-primary hover:bg-primary/90 text-primary-foreground py-3.5 rounded-2xl font-bold text-sm card-shadow-md lift active:scale-[0.98] transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+        >
+          {generating ? (
+            <>
+              <Loader2 className="w-5 h-5 animate-spin" />
+              {t("insightsPage.generating")}
+            </>
+          ) : (
+            <>
+              <Download className="w-5 h-5" />
+              {t("insightsPage.downloadReport")}
+            </>
+          )}
+        </button>
 
         {/* 30-Day Forecast (NEW) */}
         <Panel title={t("insightsPage.forecast")} subtitle={t("insightsPage.forecastSub")}>
