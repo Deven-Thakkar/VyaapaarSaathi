@@ -101,6 +101,8 @@ const en = {
     week: "This Week",
     month: "This Month",
     recent: "Recent Transactions",
+    transactions: "transactions",
+    noSales: "No sales yet",
     manualEntry: "Manual Sales Entry",
     vendorName: "Vendor Name",
     date: "Sale Date",
@@ -140,6 +142,7 @@ const en = {
     productAddError: "Failed to add product",
     barcode: "Barcode",
     manual: "Manual Entry",
+    scanBill: "Scan Bill",
   },
   udhaar: {
     title: "Udhaar",

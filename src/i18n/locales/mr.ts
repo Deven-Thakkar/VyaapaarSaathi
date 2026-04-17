@@ -103,6 +103,8 @@ const mr: Translation = {
     week: "या आठवड्यात",
     month: "या महिन्यात",
     recent: "अलीकडील व्यवहार",
+    transactions: "व्यवहार",
+    noSales: "अद्याप कोणतीही विक्री नाही",
     manualEntry: "हाताने विक्री नोंद",
     vendorName: "विक्रेता नाव",
     date: "विक्री तारीख",
@@ -142,6 +144,7 @@ const mr: Translation = {
     productAddError: "उत्पादन जोडण्यात अयशस्वी",
     barcode: "बारकोड",
     manual: "मॅनुअल नोंद",
+    scanBill: "बिल स्कॅन करा",
   },
   udhaar: {
     title: "उधार",
