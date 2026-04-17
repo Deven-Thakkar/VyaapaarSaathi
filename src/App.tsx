@@ -10,7 +10,10 @@ import AddPage from "./pages/AddPage";
 import VoiceEntryPage from "./pages/VoiceEntryPage";
 import ScanBillPage from "./pages/ScanBillPage";
 import SalesPage from "./pages/SalesPage";
+import AddManualSalesPage from "./pages/AddManualSalesPage";
 import InventoryPage from "./pages/InventoryPage";
+import AddProductPage from "./pages/AddProductPage";
+import AddManualStockPage from "./pages/AddManualStockPage";
 import ProductDetailPage from "./pages/ProductDetailPage";
 import UdhaariPage from "./pages/UdhaariPage";
 import TransactionsPage from "./pages/TransactionsPage";
@@ -38,8 +41,11 @@ const App = () => (
             <Route path="/add" element={<AddPage />} />
             <Route path="/add/voice" element={<VoiceEntryPage />} />
             <Route path="/add/scan" element={<ScanBillPage />} />
+            <Route path="/add/sales/manual" element={<AddManualSalesPage />} />
             <Route path="/sales" element={<SalesPage />} />
             <Route path="/inventory" element={<InventoryPage />} />
+            <Route path="/inventory/add" element={<AddProductPage />} />
+            <Route path="/inventory/manual-entry" element={<AddManualStockPage />} />
             <Route path="/inventory/:id" element={<ProductDetailPage />} />
             <Route path="/udhaari" element={<UdhaariPage />} />
             <Route path="/transactions" element={<TransactionsPage />} />
