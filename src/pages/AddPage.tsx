@@ -1,4 +1,5 @@
 import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
 import { Camera, Barcode, Mic, PenLine, Package, IndianRupee, ArrowLeft, ChevronRight } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -10,30 +11,58 @@ export default function AddPage() {
   const [category, setCategory] = useState<Category | null>(null);
 
   const methods = [
-    { key: "scan", icon: Camera, label: t("add.scanBill"), desc: t("add.scanBillDesc") },
-    { key: "barcode", icon: Barcode, label: t("add.scanBarcode"), desc: t("add.scanBarcodeDesc") },
-    { key: "voice", icon: Mic, label: t("add.voice"), desc: t("add.voiceDesc") },
-    { key: "manual", icon: PenLine, label: t("add.manual"), desc: t("add.manualDesc") },
+    {
+      key: "scan",
+      icon: Camera,
+      label: t("add.scanBill"),
+      desc: t("add.scanBillDesc"),
+      iconBg: "bg-orange-100 text-orange-600",
+      ring: "hover:border-orange-400",
+    },
+    {
+      key: "barcode",
+      icon: Barcode,
+      label: t("add.scanBarcode"),
+      desc: t("add.scanBarcodeDesc"),
+      iconBg: "bg-purple-100 text-purple-600",
+      ring: "hover:border-purple-400",
+    },
+    {
+      key: "voice",
+      icon: Mic,
+      label: t("add.voice"),
+      desc: t("add.voiceDesc"),
+      iconBg: "bg-green-100 text-green-600",
+      ring: "hover:border-green-400",
+    },
+    {
+      key: "manual",
+      icon: PenLine,
+      label: t("add.manual"),
+      desc: t("add.manualDesc"),
+      iconBg: "bg-teal-100 text-teal-600",
+      ring: "hover:border-teal-400",
+    },
   ];
+
+  const backBtn = category ? (
+    <button
+      onClick={() => setCategory(null)}
+      className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-accent transition-colors"
+      aria-label={t("add.back")}
+    >
+      <ArrowLeft className="w-4 h-4" />
+    </button>
+  ) : null;
 
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto p-4 lg:p-6">
-        <div className="flex items-center gap-3 mb-1">
-          {category && (
-            <button
-              onClick={() => setCategory(null)}
-              className="w-9 h-9 rounded-full bg-card border border-border flex items-center justify-center text-foreground hover:bg-accent transition-colors"
-              aria-label={t("add.back")}
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </button>
-          )}
-          <h1 className="text-xl font-bold text-heading">{t("add.title")}</h1>
-        </div>
-        <p className="text-sm text-muted-foreground mb-6 ml-12 -mt-1">
-          {category ? t("add.chooseHow") : t("add.chooseWhat")}
-        </p>
+        <PageHeader
+          title={t("add.title")}
+          subtitle={category ? t("add.chooseHow") : t("add.chooseWhat")}
+          right={backBtn}
+        />
 
         {!category ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-fade-in">
@@ -55,9 +84,9 @@ export default function AddPage() {
             {methods.map((m) => (
               <button
                 key={m.key}
-                className="flex flex-col items-center gap-3 bg-card rounded-2xl card-shadow p-6 lift active:scale-[0.97] transition-all border border-transparent hover:border-primary/30"
+                className={`flex flex-col items-center gap-3 bg-card rounded-2xl card-shadow p-6 lift active:scale-[0.97] transition-all border-2 border-transparent ${m.ring}`}
               >
-                <div className="w-14 h-14 rounded-2xl bg-accent text-primary flex items-center justify-center">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${m.iconBg}`}>
                   <m.icon className="w-7 h-7" />
                 </div>
                 <div className="text-center">
@@ -87,7 +116,7 @@ function CategoryCard({
   return (
     <button
       onClick={onClick}
-      className="group flex items-center gap-4 bg-card rounded-2xl card-shadow-md p-5 lift active:scale-[0.98] transition-all border border-transparent hover:border-primary/30 text-left"
+      className="group flex items-center gap-4 bg-card rounded-2xl card-shadow-md p-5 lift active:scale-[0.98] transition-all border-2 border-transparent hover:border-primary/40 text-left"
     >
       <div className="w-14 h-14 rounded-2xl bg-gradient-auth text-primary-foreground flex items-center justify-center shrink-0">
         {icon}

@@ -1,4 +1,4 @@
-import { Home, Plus, TrendingUp, Package, HandCoins } from "lucide-react";
+import { Home, Plus, BarChart3, Package, HandCoins } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 
@@ -9,7 +9,7 @@ export default function BottomNav() {
 
   const navItems = [
     { icon: Home, label: t("nav.home"), path: "/home", badge: 0 },
-    { icon: TrendingUp, label: t("nav.sales"), path: "/sales", badge: 0 },
+    { icon: BarChart3, label: t("nav.insights"), path: "/insights", badge: 0 },
     { icon: Plus, label: t("nav.add"), path: "/add", isCenter: true, badge: 0 },
     { icon: Package, label: t("nav.inventory"), path: "/inventory", badge: 4 },
     { icon: HandCoins, label: t("nav.udhaar"), path: "/udhaari", badge: 5 },

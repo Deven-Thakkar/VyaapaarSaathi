@@ -13,6 +13,7 @@ import UdhaariPage from "./pages/UdhaariPage";
 import TransactionsPage from "./pages/TransactionsPage";
 import AiPage from "./pages/AiPage";
 import SettingsPage from "./pages/SettingsPage";
+import InsightsPage from "./pages/InsightsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/home" element={<HomePage />} />
+          <Route path="/insights" element={<InsightsPage />} />
           <Route path="/add" element={<AddPage />} />
           <Route path="/sales" element={<SalesPage />} />
           <Route path="/inventory" element={<InventoryPage />} />

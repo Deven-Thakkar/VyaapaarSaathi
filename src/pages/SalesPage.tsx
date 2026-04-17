@@ -1,4 +1,5 @@
 import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
 import { TrendingUp, ArrowDownRight, ArrowUpRight } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -18,8 +19,7 @@ export default function SalesPage() {
   return (
     <AppShell>
       <div className="max-w-2xl mx-auto p-4 lg:p-6">
-        <h1 className="text-xl font-bold text-heading mb-1">{t("sales.title")}</h1>
-        <p className="text-sm text-muted-foreground mb-5">{t("sales.summary")}</p>
+        <PageHeader title={t("sales.title")} subtitle={t("sales.summary")} />
 
         {/* Summary cards */}
         <div className="grid grid-cols-3 gap-3 mb-5">
