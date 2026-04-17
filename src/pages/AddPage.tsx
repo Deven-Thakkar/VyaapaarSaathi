@@ -92,6 +92,8 @@ export default function AddPage() {
                   } else if (m.key === "scan") {
                     if (category === "inventory") {
                       navigate("/inventory/scan");
+                    } else if (category === "sales") {
+                      navigate("/sales/scan");
                     } else {
                       navigate("/add/scan");
                     }

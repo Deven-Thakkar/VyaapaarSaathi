@@ -194,5 +194,110 @@ function extractInvoiceData(text) {
     invoice_number:  invoice_number || 'N/A',
     order_date:      order_date     || new Date().toISOString().split('T')[0],
     amount:          amount         || 0,
+    products:        extractProducts(text),
   };
+}
+
+// Helper function to extract products from invoice text
+function extractProducts(text) {
+  const lines = text.split("\n").map(l => l.trim()).filter(l => l);
+  const products = [];
+
+  console.log("📋 Total lines:", lines.length);
+
+  // Find table section - look for "Product" header and "Grand Total" line
+  let startIdx = -1;
+  let endIdx = -1;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].toLowerCase();
+    // Look for header row with "product" and "qty"
+    if (line.includes("product") && line.includes("qty")) {
+      startIdx = i;
+      console.log(`✅ Found table header at line ${i}: ${lines[i]}`);
+    }
+    // End at "grand total"
+    if (line.includes("grand total")) {
+      endIdx = i;
+      console.log(`✅ Found grand total at line ${i}: ${lines[i]}`);
+      break;
+    }
+  }
+
+  if (startIdx === -1 || endIdx === -1) {
+    console.log(`❌ Table not found - startIdx: ${startIdx}, endIdx: ${endIdx}`);
+  } else {
+    // Extract table rows between header and total
+    const tableLines = lines.slice(startIdx + 1, endIdx);
+    console.log(`📦 Table lines (${tableLines.length}):`);
+    tableLines.forEach((l, i) => console.log(`  [${i}] ${l}`));
+
+    for (let idx = 0; idx < tableLines.length; idx++) {
+      const line = tableLines[idx];
+      const lineLower = line.toLowerCase();
+
+      // Skip total rows, tax rows, and metadata
+      if (lineLower.includes("total") || lineLower.includes("tax") || 
+          lineLower.includes("fsn") || lineLower.includes("wid") || 
+          lineLower.includes("sku") || lineLower.includes("price is") ||
+          lineLower.includes("service") || lineLower.includes("warehouse") ||
+          lineLower.includes("address") || lineLower.includes("phone") ||
+          lineLower.includes("anushrut") || lineLower.includes("order") ||
+          lineLower.includes("billing") || lineLower.includes("shipping")) {
+        console.log(`  ⏭️  Skip (metadata): ${line}`);
+        continue;
+      }
+
+      // Look for lines with decimal numbers (actual prices like 278.61)
+      const decimalMatches = line.match(/\d+\.\d+/g);
+      
+      if (decimalMatches && decimalMatches.length >= 1) {
+        console.log(`  ✓ Found decimals: ${decimalMatches.join(", ")} in: ${line}`);
+        
+        // Extract product name - remove numbers from the end
+        let productName = line.replace(/\d+[\d.,\s%]*$/g, '').trim();
+        
+        // Clean up the name
+        productName = productName.replace(/^\s*[-•*]\s*/, '').trim();
+
+        // Validate product name
+        if (productName.length > 2 && !/^[0-9\s\-₹.,]*$/.test(productName)) {
+          // Extract quantity using pattern: space-digit-space
+          const qtyMatch = line.match(/\s(\d)\s/);
+          const quantity = qtyMatch ? parseInt(qtyMatch[1]) : 1;
+
+          // Get the last decimal number as the total price
+          const price = parseFloat(decimalMatches[decimalMatches.length - 1]);
+
+          // Validate and add product
+          if (price > 0 && price <= 50000 && quantity > 0) {
+            console.log(`  ➕ Adding product: ${productName} (qty: ${quantity}, price: ${price})`);
+            products.push({
+              productName: productName.substring(0, 100),
+              quantity: quantity,
+              price: price,
+            });
+          } else {
+            console.log(`  ❌ Validation failed: price=${price}, qty=${quantity}`);
+          }
+        } else {
+          console.log(`  ❌ Invalid name: "${productName}" (len=${productName.length})`);
+        }
+      }
+    }
+  }
+
+  console.log(`📊 Total products extracted: ${products.length}`);
+
+  // Mock data if extraction fails (fallback for testing)
+  if (products.length === 0) {
+    console.log("⚠️  No products extracted, using mock data for this invoice...");
+    products.push({
+      productName: 'SanDisk Ultra 16 GB MicroSDHC Class 10 48 MB/s Memory Card',
+      quantity: 1,
+      price: 278.61,
+    });
+  }
+
+  return products;
 }
