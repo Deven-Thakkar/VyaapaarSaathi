@@ -4,6 +4,7 @@ import { Phone, ArrowRight, Sparkles, User, Building2, IndianRupee, Target, Tren
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useProfile } from "@/context/ProfileContext";
+import { supabase } from "@/lib/supabase";
 
 type Tab = "login" | "signup";
 
@@ -17,9 +18,11 @@ export default function LoginPage() {
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [isLoading, setIsLoading] = useState(false);
 
   // signup state
   const [name, setName] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
   const [bizType, setBizType] = useState("");
   const [revenue, setRevenue] = useState("");
   const [investment, setInvestment] = useState("");
@@ -38,19 +41,47 @@ export default function LoginPage() {
     { v: "others", l: t("auth.bizTypes.others") },
   ];
 
-  const handleSignup = () => {
-    updateProfile({
-      name: name || "Rahul Sharma",
-      businessType: bizType,
-      monthlyRevenue: Number(revenue) || 0,
-      investment: Number(investment) || 0,
-      goal,
-      stock: Number(stock) || 0,
-      salaries: Number(salaries) || 0,
-      rent: Number(rent) || 0,
-      utilities: Number(utilities) || 0,
-    });
-    navigate("/home");
+  const handleSignup = async () => {
+    try {
+      setIsLoading(true);
+
+      // Insert into Supabase table public.businesses
+      const { error } = await supabase.from("businesses").insert([{
+        owner_name: name || "Rahul Sharma",
+        phone_number: signupPhone ? "+91 " + signupPhone : null,
+        shop_name: `${name || "Rahul"}'s Shop`,
+        business_type: bizType,
+        monthly_revenue: Number(revenue) || 0,
+        investment_amount: Number(investment) || 0,
+        cost_stock: Number(stock) || 0,
+        cost_salaries: Number(salaries) || 0,
+        cost_rent: Number(rent) || 0,
+        cost_utilities: Number(utilities) || 0,
+      }]);
+
+      if (error) {
+        console.error("Signup error:", error);
+        alert("Failed to create account. Please try again.");
+        return;
+      }
+
+      // Update local profile state
+      updateProfile({
+        name: name || "Rahul Sharma",
+        ...(signupPhone ? { phone: "+91 " + signupPhone } : {}),
+        businessType: bizType,
+        monthlyRevenue: Number(revenue) || 0,
+        investment: Number(investment) || 0,
+        stock: Number(stock) || 0,
+        salaries: Number(salaries) || 0,
+        rent: Number(rent) || 0,
+        utilities: Number(utilities) || 0,
+      });
+
+      navigate("/home");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -146,6 +177,18 @@ export default function LoginPage() {
                   className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
                 />
               </Field>
+              <Field icon={<Phone className="w-4 h-4" />} label={t("auth.phone")}>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-muted-foreground">+91</span>
+                  <input
+                    type="tel"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
+                    placeholder={t("auth.phonePh")}
+                    className="flex-1 bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                  />
+                </div>
+              </Field>
               <Field icon={<Building2 className="w-4 h-4" />} label={t("auth.businessType")}>
                 <select
                   value={bizType}
@@ -192,8 +235,8 @@ export default function LoginPage() {
                 <NumInput value={utilities} setValue={setUtilities} placeholder={t("auth.utilitiesPh")} />
               </Field>
 
-              <PrimaryBtn onClick={handleSignup} disabled={!name || !bizType || !revenue}>
-                {t("auth.cont")} <ArrowRight className="w-4 h-4" />
+              <PrimaryBtn onClick={handleSignup} disabled={isLoading || !name || !bizType || !revenue}>
+                {isLoading ? "Signing up..." : <>{t("auth.cont")} <ArrowRight className="w-4 h-4" /></>}
               </PrimaryBtn>
             </div>
           )}
