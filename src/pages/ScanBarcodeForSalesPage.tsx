@@ -27,6 +27,7 @@ export default function ScanBarcodeForSalesPage() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [pendingProduct, setPendingProduct] = useState<PendingProduct | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!profile.businessId) {
@@ -47,17 +48,35 @@ export default function ScanBarcodeForSalesPage() {
     );
   }
 
-  // When a barcode is detected — hardcoded as Happydent Chewing Gum
-  const handleBarcodeScan = useCallback((barcode: string) => {
+  // When a barcode is detected — look up product from Barcode Lookup API
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
     console.log("🔍 Barcode detected:", barcode);
     setError(null);
-    setPendingProduct({
-      barcode,
-      productName: "Happydent Chewing Gum",
-      image: "https://m.media-amazon.com/images/I/51wPGrEoMWL.jpg",
-      price: 0,
-      quantity: 1,
-    });
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(`/api/barcode-lookup?barcode=${barcode}`);
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        setError(`Product not found for barcode: ${barcode}`);
+        setIsLoading(false);
+        return;
+      }
+
+      setPendingProduct({
+        barcode,
+        productName: data.productName || "Unknown Product",
+        image: data.image || undefined,
+        price: data.price || 0,
+        quantity: 1,
+      });
+    } catch (err) {
+      console.error("Barcode lookup error:", err);
+      setError("Failed to look up product. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   // Confirm and add to cart
@@ -156,6 +175,22 @@ export default function ScanBarcodeForSalesPage() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Loading state */}
+        {isLoading && (
+          <div className="bg-card rounded-2xl card-shadow-md p-6 text-center space-y-3">
+            <Loader2 className="w-8 h-8 text-primary animate-spin mx-auto" />
+            <p className="text-sm text-muted-foreground">Looking up product...</p>
+          </div>
+        )}
+
+        {/* Error message */}
+        {error && !pendingProduct && (
+          <div className="bg-destructive/10 border border-destructive/30 rounded-2xl p-4">
+            <p className="text-sm text-destructive font-medium">{error}</p>
+            <p className="text-xs text-destructive/80 mt-1">Please scan another barcode</p>
+          </div>
+        )}
+
         {/* Pending Product Form */}
         {pendingProduct && (
           <div className="bg-card rounded-2xl card-shadow-md p-6 space-y-4 border-2 border-primary/20">
@@ -239,8 +274,8 @@ export default function ScanBarcodeForSalesPage() {
           </div>
         )}
 
-        {/* Scanner — always visible */}
-        {!pendingProduct && (
+        {/* Scanner — always visible when no product is pending or loading */}
+        {!pendingProduct && !isLoading && (
           <div className="bg-card rounded-2xl card-shadow-md p-6">
             <BarcodeScanner
               onResult={handleBarcodeScan}
