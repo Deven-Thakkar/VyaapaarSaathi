@@ -22,7 +22,7 @@ app.use(express.json());
 app.use("/api", createChatbotRouter());
 app.use("/api", createInvoiceRouter());
 
-const USE_MOCK_DATA = true;
+const USE_MOCK_DATA = false;
 let cachedMockData = null;
 
 // ─── Helper: Generate Realistic Mock Demo Data ───
@@ -104,15 +104,15 @@ app.post("/api/insights-data", async (req, res) => {
       const since90 = new Date();
       since90.setDate(since90.getDate() - 90);
 
-      const { data: rawTxns, error: txnErr } = await supabase
-        .from("transactions")
-        .select("type, amount, transaction_date, category, description")
+      const { data: rawSales, error: saleErr } = await supabase
+        .from("sales")
+        .select("total_amount, Date")
         .eq("business_id", business_id)
-        .gte("transaction_date", since90.toISOString())
-        .order("transaction_date", { ascending: true });
+        .gte("Date", since90.toISOString().split("T")[0])
+        .order("Date", { ascending: true });
 
-      if (txnErr) throw txnErr;
-      txns = rawTxns || [];
+      if (saleErr) throw saleErr;
+      txns = rawSales || [];
 
       const { data: prods } = await supabase.from("products").select("name, stock, price").eq("business_id", business_id).order("stock", { ascending: false }).limit(5);
       productsList = prods || [];
@@ -124,11 +124,11 @@ app.post("/api/insights-data", async (req, res) => {
     cutoff30.setDate(cutoff30.getDate() - 30);
 
     txns.forEach(t => {
-      const dateStr = t.transaction_date.slice(0, 10);
+      const dateStr = t.Date || t.transaction_date?.slice(0, 10);
+      if (!dateStr) return;
       if (new Date(dateStr) < cutoff30) return;
       if (!dailyMap[dateStr]) dailyMap[dateStr] = { income: 0, expense: 0 };
-      if (t.type === "income") dailyMap[dateStr].income += Number(t.amount);
-      else dailyMap[dateStr].expense += Number(t.amount);
+      dailyMap[dateStr].income += Number(t.total_amount || t.amount || 0);
     });
 
     const daily_cashflow = Object.entries(dailyMap)
@@ -146,11 +146,12 @@ app.post("/api/insights-data", async (req, res) => {
     cutoff6m.setMonth(cutoff6m.getMonth() - 6);
 
     txns.forEach(t => {
-      if (new Date(t.transaction_date) < cutoff6m) return;
-      const key = t.transaction_date.slice(0, 7);
+      const dateStr = t.Date || t.transaction_date;
+      if (!dateStr) return;
+      if (new Date(dateStr) < cutoff6m) return;
+      const key = dateStr.slice(0, 7);
       if (!monthlyMap[key]) monthlyMap[key] = { income: 0, expense: 0 };
-      if (t.type === "income") monthlyMap[key].income += Number(t.amount);
-      else monthlyMap[key].expense += Number(t.amount);
+      monthlyMap[key].income += Number(t.total_amount || t.amount || 0);
     });
 
     const monthly_revenue = Object.entries(monthlyMap)
@@ -269,16 +270,18 @@ app.post("/api/predict", async (req, res) => {
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
 
-      const { data: rawTxns } = await supabase.from("transactions").select("type, amount, transaction_date").eq("business_id", business_id);
+      const { data: rawSales } = await supabase.from("sales").select("total_amount, Date").eq("business_id", business_id);
 
-      const currentMonthTxns = (rawTxns || []).filter(t => new Date(t.transaction_date) >= startOfMonth);
+      const currentMonthSales = (rawSales || []).filter(t => new Date(t.Date || t.transaction_date) >= startOfMonth);
 
-      if (currentMonthTxns && currentMonthTxns.length > 0) {
-        sales = currentMonthTxns.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
-        expenses = currentMonthTxns.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
+      if (currentMonthSales && currentMonthSales.length > 0) {
+        sales = currentMonthSales.reduce((s, t) => s + Number(t.total_amount || t.amount), 0);
+        // Assuming all transactions are income, and expenses are fixedCosts, 
+        // since VoiceEntryPage inserts into sales table directly and doesn't record expenses.
+        expenses = fixedCosts;
       }
 
-      const today = new Date().toISOString();
+      const today = new Date().toISOString().split("T")[0];
       const { data: udhaarData } = await supabase.from("udhaar_records").select("amount_remaining, due_date").eq("business_id", business_id).eq("status", "pending");
 
       if (udhaarData && udhaarData.length > 0) {

@@ -138,75 +138,42 @@ Final answer:
         }
       }
 
-      // 1. TOTAL UDHAAR
-      if (lowerMsg.includes("udhaar")) {
+      // 1 & 2. UDHAAR / FOLLOW-UP / MONEY OWED
+      if (
+        lowerMsg.includes("udhaar") || 
+        lowerMsg.includes("owe") || 
+        lowerMsg.includes("due") || 
+        lowerMsg.includes("pending") || 
+        lowerMsg.includes("baki") || 
+        lowerMsg.includes("lena") || 
+        lowerMsg.includes("follow") ||
+        lowerMsg.includes("kis se") ||
+        lowerMsg.includes("give me money")
+      ) {
         const { data, error } = await supabase
           .from("udhaar_records")
-          .select("amount_remaining")
-          .eq("business_id", business_id);
-
-        if (error) throw error;
-
-        const total = data.reduce(
-          (sum, item) => sum + Number(item.amount_remaining),
-          0
-        );
-
-        const aiReply = await generateAIResponse(`
-You are a financial assistant for Indian shopkeepers.
-
-STRICT RULES:
-- Use clean Hinglish (no broken words)
-- Keep it short (1 line)
-- Be natural and professional
-
-Example:
-"Aapka total udhaar ₹4500 pending hai."
-
-User data:
-Total udhaar = ₹${total}
-
-User question:
-${message}
-
-Final answer:
-`);
-
-        return res.json({ reply: aiReply });
-      }
-
-      // 2. FOLLOW-UP
-      if (lowerMsg.includes("follow")) {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("name, total_outstanding")
+          .select("customer_name, amount_remaining")
           .eq("business_id", business_id)
-          .order("total_outstanding", { ascending: false })
-          .limit(3);
+          .eq("status", "pending");
 
         if (error) throw error;
 
-        let customerList = "";
-        data.forEach((c) => {
-          customerList += `${c.name} - ₹${c.total_outstanding}, `;
-        });
+        const total = data.reduce((sum, item) => sum + Number(item.amount_remaining), 0);
+        let customerList = data.map(c => `${c.customer_name}: ₹${c.amount_remaining}`).join(", ");
 
         const aiReply = await generateAIResponse(`
-You are helping a shopkeeper manage payments.
+System: You are a strict data-extraction AI for Indian shopkeepers.
+CRITICAL RULES:
+1. You MUST ONLY use the Data provided below. NEVER invent, assume, or hallucinate numbers.
+2. Do NOT refuse to answer. Do NOT ask for more context.
+3. Answer the user directly and concisely in 1 sentence using clean Hinglish.
+4. If a customer is not in the list, explicitly say they are not in the list.
 
-STRICT RULES:
-- Clean Hinglish
-- Short and practical
-- No weird words
+DATA FROM DATABASE:
+Total Pending Udhaar: ₹${total}
+Customers owing money: ${customerList || "None"}
 
-Example:
-"Sabse pehle Sharma ji se follow up karo, unka ₹3000 pending hai."
-
-Customers:
-${customerList}
-
-User question:
-${message}
+User asks: "${message}"
 
 Final answer:
 `);

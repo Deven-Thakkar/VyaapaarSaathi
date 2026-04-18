@@ -53,11 +53,18 @@ def predict():
         # Try ML models first, fall back to rules if unavailable
         if cashflow_model and risk_model:
             try:
+                import numpy as np
                 df = pd.DataFrame([data])
                 df['expense_ratio'] = df['expenses'] / (df['sales'] + 1)
                 df['net_cash'] = df['sales'] - df['expenses']
-                cashflow_prediction = float(cashflow_model.predict(df)[0])
-                risk_prediction = float(risk_model.predict(df)[0])
+                
+                # The models were trained on 41 features (likely including dummy variables).
+                # We pad the 8 core features with zeros so the model can predict properly.
+                features = df.to_numpy()
+                padded_features = np.pad(features, ((0, 0), (0, 41 - features.shape[1])), 'constant')
+                
+                cashflow_prediction = float(cashflow_model.predict(padded_features)[0])
+                risk_prediction = float(risk_model.predict(padded_features)[0])
                 source = "ml_model"
             except Exception as model_err:
                 print(f"⚠️ Model prediction failed, using fallback: {model_err}")
