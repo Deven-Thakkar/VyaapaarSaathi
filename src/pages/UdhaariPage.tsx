@@ -7,7 +7,22 @@ import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/context/ProfileContext";
 import { toast } from "sonner";
 
-type Customer = { id: number; name: string; amount: number; days: number };
+type Customer = { id: number; name: string; amount: number; dueDate: string | null };
+
+function getDueInfo(dueDate: string | null): { label: string; isOverdue: boolean; isUrgent: boolean } {
+  if (!dueDate) return { label: "No due date", isOverdue: false, isUrgent: false };
+  const now = new Date();
+  const due = new Date(dueDate);
+  const diffMs = due.getTime() - now.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) {
+    return { label: `${Math.abs(diffDays)} days overdue`, isOverdue: true, isUrgent: true };
+  } else if (diffDays === 0) {
+    return { label: "Due today", isOverdue: false, isUrgent: true };
+  } else {
+    return { label: `${diffDays} days left`, isOverdue: false, isUrgent: diffDays <= 3 };
+  }
+}
 
 export default function UdhaariPage() {
   const { t } = useTranslation();
@@ -29,14 +44,7 @@ export default function UdhaariPage() {
       try {
         const { data, error } = await supabase
           .from("udhaar_records")
-          .select(`
-            id,
-            amount_remaining,
-            due_date,
-            customers (
-              name
-            )
-          `)
+          .select("id, customer_name, amount_remaining, due_date, status")
           .eq("business_id", profile.businessId)
           .eq("status", "pending")
           .order("created_at", { ascending: false });
@@ -44,21 +52,12 @@ export default function UdhaariPage() {
         if (error) throw error;
 
         if (data) {
-          const mapped = data.map((d: any) => {
-            let days = 0;
-            if (d.due_date) {
-              const due = new Date(d.due_date);
-              const now = new Date();
-              const diffTime = now.getTime() - due.getTime();
-              days = diffTime > 0 ? Math.ceil(diffTime / (1000 * 60 * 60 * 24)) : 0;
-            }
-            return {
-              id: d.id,
-              name: d.customers?.name || "Unknown",
-              amount: Number(d.amount_remaining),
-              days
-            };
-          });
+          const mapped = data.map((d: any) => ({
+            id: d.id,
+            name: d.customer_name || "Unknown",
+            amount: Number(d.amount_remaining),
+            dueDate: d.due_date || null
+          }));
           setList(mapped);
         }
       } catch (err: any) {
@@ -75,33 +74,21 @@ export default function UdhaariPage() {
   const total = list.reduce((s, c) => s + c.amount, 0);
 
   const handleSave = async () => {
-    if (!name || !amount || !profile?.businessId) return;
+    if (!name || !amount) {
+      toast.error("Please enter customer name and amount.");
+      return;
+    }
+    if (!profile?.businessId) {
+      toast.error("Business not found. Please log out and log in again.");
+      return;
+    }
     
     try {
-      let customerId;
-      const { data: existing } = await supabase
-        .from("customers")
-        .select("id")
-        .eq("business_id", profile.businessId)
-        .eq("name", name)
-        .maybeSingle();
-        
-      if (existing) {
-        customerId = existing.id;
-      } else {
-        const { data: newCust, error: custErr } = await supabase
-          .from("customers")
-          .insert({ name, business_id: profile.businessId })
-          .select("id").single();
-        if (custErr) throw custErr;
-        customerId = newCust.id;
-      }
-
       const { data: newRecord, error } = await supabase
         .from("udhaar_records")
         .insert({
           business_id: profile.businessId,
-          customer_id: customerId,
+          customer_name: name,
           amount_remaining: Number(amount),
           due_date: dueDate || null,
           status: "pending"
@@ -109,14 +96,8 @@ export default function UdhaariPage() {
 
       if (error) throw error;
 
-      let days = 0;
-      if (dueDate) {
-        const diffTime = Date.now() - new Date(dueDate).getTime();
-        days = diffTime > 0 ? Math.ceil(diffTime / (1000 * 60 * 60 * 24)) : 0;
-      }
-
       setList((prev) => [
-        { id: newRecord.id, name, amount: Number(amount), days },
+        { id: newRecord.id, name, amount: Number(amount), dueDate: dueDate || null },
         ...prev,
       ]);
 
@@ -238,22 +219,22 @@ export default function UdhaariPage() {
             </div>
           ) : (
             list.map((c) => {
-              const overdue = c.days > 20;
+              const { label, isOverdue, isUrgent } = getDueInfo(c.dueDate);
               return (
-              <div key={c.id} className={`bg-card rounded-2xl card-shadow p-4 ${overdue ? "ring-2 ring-destructive/40 bg-destructive/5" : ""}`}>
+              <div key={c.id} className={`bg-card rounded-2xl card-shadow p-4 ${isOverdue ? "ring-2 ring-destructive/40 bg-destructive/5" : ""}`}>
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${overdue ? "bg-destructive/15 text-destructive" : "bg-accent text-primary"}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${isOverdue ? "bg-destructive/15 text-destructive" : "bg-accent text-primary"}`}>
                     {c.name[0]}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-foreground truncate">{c.name}</p>
-                    <p className={`text-[11px] font-semibold flex items-center gap-1 ${overdue ? "text-destructive" : c.days > 10 ? "text-warning" : "text-muted-foreground"}`}>
-                      {overdue && <AlertTriangle className="w-3 h-3" />}
-                      {t("udhaar.daysPending", { days: c.days })}
-                      {overdue && ` · ${t("udhaar.overdue")}`}
+                    <p className={`text-[11px] font-semibold flex items-center gap-1 ${isOverdue ? "text-destructive" : isUrgent ? "text-warning" : "text-muted-foreground"}`}>
+                      {isOverdue && <AlertTriangle className="w-3 h-3" />}
+                      {label}
+                      {isOverdue && ` · ${t("udhaar.overdue")}`}
                     </p>
                   </div>
-                  <p className={`text-base font-extrabold ${overdue ? "text-destructive" : "text-heading"}`}>
+                  <p className={`text-base font-extrabold ${isOverdue ? "text-destructive" : "text-heading"}`}>
                     ₹{c.amount.toLocaleString("en-IN")}
                   </p>
                 </div>

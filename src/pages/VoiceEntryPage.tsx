@@ -2,7 +2,7 @@ import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { useState, useRef, useEffect } from "react";
 import { Mic, Loader2, ArrowLeft, Check, Package, AlertCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
@@ -25,7 +25,8 @@ export default function VoiceEntryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile } = useProfile();
-  const searchParams = new URLSearchParams(window.location.search);
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
   const entryType = searchParams.get("type") || "inventory"; // "inventory" or "sales" or "udhaar"
 
   const [isListening, setIsListening] = useState(false);
@@ -212,57 +213,37 @@ RULES:
     setIsProcessing(true);
 
     try {
-      if (entryType === "sales" || parsedData.type === "sale" || parsedData.type === "income") {
+      if (entryType === "udhaar" || parsedData.type === "udhaar") {
+        const custName = parsedData.customer_name || "Unknown Customer";
+
+        // Parse due_date roughly
+        let dueDateStr = null;
+        if (parsedData.due_date) {
+           // Default to 7 days from now
+           const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+           dueDateStr = futureDate.toISOString().split("T")[0]; // YYYY-MM-DD
+        }
+
+        const { error } = await supabase.from("udhaar_records").insert({
+          business_id: profile.businessId,
+          customer_name: custName,
+          amount_remaining: Number(parsedData.amount) || 0,
+          due_date: dueDateStr,
+          status: "pending"
+        }).select().single();
+        if (error) throw error;
+        toast.success("Udhaar successfully saved to database!");
+
+      } else if (entryType === "sales" || parsedData.type === "sale" || parsedData.type === "income") {
         const { error } = await supabase.from("sales").insert({
           business_id: profile.businessId,
-          total_amount: parsedData.amount || parsedData.price || 0,
+          total_amount: Number(parsedData.amount || parsedData.price) || 0,
           Vendor: "Direct Sale (Voice)",
           Date: new Date().toISOString().split("T")[0],
           created_at: new Date().toISOString()
         }).select().single();
         if (error) throw error;
         toast.success("Sale successfully saved to database!");
-
-      } else if (entryType === "udhaar" || parsedData.type === "udhaar") {
-        // Find or create customer
-        let customerId;
-        const custName = parsedData.customer_name || "Unknown Customer";
-        const { data: existingCustomer } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("business_id", profile.businessId)
-          .eq("name", custName)
-          .maybeSingle();
-
-        if (existingCustomer) {
-          customerId = existingCustomer.id;
-        } else {
-          const { data: newCustomer, error: custError } = await supabase
-            .from("customers")
-            .insert({ name: custName, business_id: profile.businessId })
-            .select("id").single();
-          if (custError) throw custError;
-          customerId = newCustomer.id;
-        }
-
-        // Parse due_date roughly
-        let dueDateISO = null;
-        if (parsedData.due_date) {
-           // For hackathon, if they specify "next week", "kal", we can just default to 7 days from now 
-           // since natural language parsing of dates without a proper library is hard.
-           // You can improve this later with `date-fns` or similar.
-           dueDateISO = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-        }
-
-        const { error } = await supabase.from("udhaar_records").insert({
-          business_id: profile.businessId,
-          customer_id: customerId,
-          amount_remaining: parsedData.amount || 0,
-          due_date: dueDateISO,
-          status: "pending"
-        }).select().single();
-        if (error) throw error;
-        toast.success("Udhaar successfully saved to database!");
 
       } else {
         const { error } = await supabase.from("products").insert({
