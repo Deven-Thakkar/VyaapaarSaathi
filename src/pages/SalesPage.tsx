@@ -16,6 +16,8 @@ export default function SalesPage() {
   useEffect(() => {
     if (profile.businessId) {
       loadSales();
+    } else {
+      setLoading(false);
     }
   }, [profile.businessId]);
 

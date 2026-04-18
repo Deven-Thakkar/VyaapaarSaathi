@@ -44,7 +44,7 @@ export default function SmartInsights() {
     fetch('/api/predict', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ business_id: profile?.business_id ?? null })
+      body: JSON.stringify({ business_id: profile?.businessId ?? null })
     })
       .then(res => {
         if (!res.ok) return res.json().then(e => Promise.reject(new Error(e.error || `Error ${res.status}`)));
@@ -54,7 +54,7 @@ export default function SmartInsights() {
       .catch(e => { setError(e.message); setLoading(false); });
   };
 
-  useEffect(() => { fetchInsights(); }, [profile?.business_id]);
+  useEffect(() => { fetchInsights(); }, [profile?.businessId]);
 
   const riskLabel = (r: number) => r > 0.65 ? 'High' : r > 0.35 ? 'Medium' : 'Low';
   const riskColor = (r: number) => r > 0.65 ? 'text-destructive' : r > 0.35 ? 'text-amber-600' : 'text-success';

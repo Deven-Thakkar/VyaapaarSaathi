@@ -37,7 +37,7 @@ export default function HomePage() {
     const loadingToast = toast.loading("Initiating call...");
     
     try {
-      const businessId = profile?.business_id;
+      const businessId = profile?.businessId;
       await triggerBolnaCall(businessId);
       toast.success("Call initiated! You will receive a call shortly.", { id: loadingToast });
     } catch (error: any) {

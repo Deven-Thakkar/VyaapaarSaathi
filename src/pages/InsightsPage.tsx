@@ -21,7 +21,7 @@ export default function InsightsPage() {
 
   useEffect(() => {
     setLoading(true);
-    const body = JSON.stringify({ business_id: profile?.business_id ?? null });
+    const body = JSON.stringify({ business_id: profile?.businessId ?? null });
 
     Promise.all([
       fetch("/api/insights-data", { method: "POST", headers: { "Content-Type": "application/json" }, body }).then(res => {
@@ -42,7 +42,7 @@ export default function InsightsPage() {
       setError(e.message);
       setLoading(false);
     });
-  }, [profile?.business_id]);
+  }, [profile?.businessId]);
 
   const handleDownload = async () => {
     setGenerating(true);
@@ -50,7 +50,7 @@ export default function InsightsPage() {
       const response = await fetch("/api/download-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ business_id: profile?.business_id ?? null }),
+        body: JSON.stringify({ business_id: profile?.businessId ?? null }),
       });
 
       if (!response.ok) throw new Error("Failed to generate report");

@@ -24,6 +24,8 @@ export default function InventoryPage() {
   useEffect(() => {
     if (profile.businessId) {
       loadProducts();
+    } else {
+      setLoading(false);
     }
   }, [profile.businessId]);
 
