@@ -174,6 +174,51 @@ app.post("/api/predict", async (req, res) => {
   }
 });
 
+// ✅ Barcode Lookup API Proxy
+app.get("/api/barcode-lookup", async (req, res) => {
+  const { barcode } = req.query;
+  
+  if (!barcode) {
+    return res.status(400).json({ error: "Barcode is required" });
+  }
+
+  try {
+    const apiKey = process.env.BARCODE_LOOKUP_API_KEY || "4k2m9qob1m0cogop0ezmtr4gho81j4";
+    const apiUrl = `https://api.barcodelookup.com/v3/products?barcode=${barcode}&key=${apiKey}`;
+    
+    console.log(`🔍 Looking up barcode: ${barcode}`);
+    
+    const response = await axios.get(apiUrl, { timeout: 10000 });
+    
+    if (response.data.products && response.data.products.length > 0) {
+      const product = response.data.products[0];
+      console.log(`✅ Found product: ${product.title}`);
+      res.json({
+        success: true,
+        barcode: barcode,
+        productName: product.title || product.product_name || "Unknown Product",
+        description: product.description || null,
+        image: product.images?.[0] || null,
+        price: product.lowest_recorded_price || product.price || null,
+      });
+    } else {
+      console.log(`❌ No product found for barcode: ${barcode}`);
+      res.status(404).json({ 
+        success: false, 
+        error: "Product not found in barcode database",
+        barcode: barcode 
+      });
+    }
+  } catch (err) {
+    console.error("❌ Barcode Lookup API error:", err.message);
+    res.status(500).json({ 
+      success: false,
+      error: "Barcode Lookup API failed", 
+      details: err.message 
+    });
+  }
+});
+
 // Root health check
 app.get("/", (req, res) => {
   res.json({ status: "ok", message: "VyaaparSaathi API server running" });

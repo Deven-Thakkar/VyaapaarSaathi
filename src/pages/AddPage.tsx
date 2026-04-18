@@ -97,6 +97,12 @@ export default function AddPage() {
                     } else {
                       navigate("/add/scan");
                     }
+                  } else if (m.key === "barcode") {
+                    if (category === "sales") {
+                      navigate("/sales/barcode");
+                    } else {
+                      console.log(`${m.key} not implemented for ${category}`);
+                    }
                   } else if (m.key === "manual" && category === "inventory") {
                     navigate("/inventory/manual-entry");
                   } else if (m.key === "manual" && category === "sales") {
