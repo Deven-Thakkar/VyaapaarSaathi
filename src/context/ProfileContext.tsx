@@ -16,6 +16,8 @@ export type FinancialProfile = {
   utilities: number;
 };
 
+const STORAGE_KEY = "vyaaparsaathi_profile";
+
 const defaultProfile: FinancialProfile = {
   name: "Rahul Sharma",
   phone: "+91 98765 43210",
@@ -31,6 +33,14 @@ const defaultProfile: FinancialProfile = {
   utilities: 8000,
 };
 
+function loadProfile(): FinancialProfile {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...defaultProfile, ...JSON.parse(raw) };
+  } catch {}
+  return defaultProfile;
+}
+
 type Ctx = {
   profile: FinancialProfile;
   updateProfile: (patch: Partial<FinancialProfile>) => void;
@@ -39,9 +49,15 @@ type Ctx = {
 const ProfileContext = createContext<Ctx | undefined>(undefined);
 
 export function ProfileProvider({ children }: { children: ReactNode }) {
-  const [profile, setProfile] = useState<FinancialProfile>(defaultProfile);
+  const [profile, setProfile] = useState<FinancialProfile>(loadProfile);
+
   const updateProfile = (patch: Partial<FinancialProfile>) =>
-    setProfile((p) => ({ ...p, ...patch }));
+    setProfile((p) => {
+      const next = { ...p, ...patch };
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {}
+      return next;
+    });
+
   return (
     <ProfileContext.Provider value={{ profile, updateProfile }}>
       {children}

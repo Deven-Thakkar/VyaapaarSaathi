@@ -5,16 +5,16 @@ import { useState, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { sendChatMessage } from "@/lib/chatbot-api";
 
-type Msg = { role: "user" | "ai"; text: string };
+import { useProfile } from "@/context/ProfileContext";
 
-// Default business ID – swap with ProfileContext value when multi-user is needed
-const DEFAULT_BUSINESS_ID = "7d1f8a08-ff5b-4bb6-8b9d-f9a3912b9b86";
+type Msg = { role: "user" | "ai"; text: string };
 
 const initialMessages: Msg[] = [
   { role: "ai", text: "Namaste! Aaj main aapki kya madad kar sakta hoon?" },
 ];
 
 export default function AiPage() {
+  const { profile } = useProfile();
   const { t } = useTranslation();
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -33,7 +33,8 @@ export default function AiPage() {
     setIsLoading(true);
 
     try {
-      const data = await sendChatMessage(text, DEFAULT_BUSINESS_ID);
+      const businessIdToUse = profile?.businessId || "7d1f8a08-ff5b-4bb6-8b9d-f9a3912b9b86";
+      const data = await sendChatMessage(text, businessIdToUse);
       setMessages((m) => [...m, { role: "ai", text: data.reply }]);
     } catch (err) {
       console.error("Chat API error:", err);

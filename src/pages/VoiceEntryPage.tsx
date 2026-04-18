@@ -2,21 +2,33 @@ import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { useState, useRef, useEffect } from "react";
 import { Mic, Loader2, ArrowLeft, Check, Package, AlertCircle } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
+import { useProfile } from "@/context/ProfileContext";
 
 interface ParsedData {
-  type: "sale" | "inventory" | null;
-  product: string | null;
-  quantity: number | null;
-  unit: string | null;
-  price: number | null;
+  type: "sale" | "inventory" | "income" | "udhaar" | null;
+  product?: string | null;
+  quantity?: number | null;
+  unit?: string | null;
+  price?: number | null;
+  amount?: number | null;
+  description?: string | null;
+  payment_method?: string | null;
+  customer_name?: string | null;
+  due_date?: string | null;
 }
 
 export default function VoiceEntryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { profile } = useProfile();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const entryType = searchParams.get("type") || "inventory"; // "inventory" or "sales" or "udhaar"
+
   const [isListening, setIsListening] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [transcript, setTranscript] = useState("");
@@ -90,7 +102,51 @@ export default function VoiceEntryPage() {
       return;
     }
 
-    const systemPrompt = `
+    let systemPrompt = "";
+    if (entryType === "udhaar") {
+      systemPrompt = `
+Return ONLY valid JSON. No extra text.
+
+FORMAT:
+{
+  "type": "udhaar",
+  "customer_name": string,
+  "amount": number,
+  "description": string | null,
+  "due_date": string | null
+}
+
+RULES:
+- Extract the customer name (e.g. "Ramesh ko 500 udhaar diya" -> customer_name: "Ramesh").
+- Extract the total amount given as udhaar, credit, or baaki.
+- Extract any short description if provided.
+- Extract when they promised to pay back if mentioned (e.g. "kal" -> "Tomorrow", "agle hafte" -> "Next Week", "10 din baad" -> "In 10 days"). 
+- MUST extract amount as a valid number.
+`;
+    } else if (entryType === "sales") {
+      systemPrompt = `
+Return ONLY valid JSON. No extra text.
+
+FORMAT:
+{
+  "type": "sale" | "income",
+  "amount": number,
+  "description": string,
+  "payment_method": "cash" | "upi" | "udhaar" | null
+}
+
+RULES:
+- Extract the total amount received, earned or sold for (e.g. "500 rupaye ki bikri" -> amount: 500).
+- Extract description of what was sold or source of income (e.g. "bikri", "sale", "shoes sold", "services").
+- Map payment methods: 
+   - paytm, gpay, phonepe, qr, online -> "upi"
+   - nakad, rokda -> "cash"
+   - baaki, udhaar, baad mein dega -> "udhaar"
+- Translate description briefly to English (e.g., "joote beche" -> "shoes sold").
+- MUST extract amount as a valid number.
+`;
+    } else {
+      systemPrompt = `
 Return ONLY valid JSON. No extra text.
 
 FORMAT:
@@ -103,13 +159,14 @@ FORMAT:
 }
 
 RULES:
-- sold, becha → sale
-- add, bought, khareeda, laya → inventory
-- cheeni → sugar, chawal → rice, tel → oil, doodh → milk, atta → flour
-- kilo → kg, packet → packet
+- sold, becha -> sale
+- add, bought, khareeda, laya -> inventory
+- cheeni -> sugar, chawal -> rice, tel -> oil, doodh -> milk, atta -> flour
+- kilo -> kg, packet -> packet
 - Extract numbers for quantity
 - Extract price if ₹, rs, rupees present
 `;
+    }
 
     try {
       const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
@@ -151,11 +208,66 @@ RULES:
     }
   };
 
-  const handleSave = () => {
-    // For hackathon scope, we just show a toast and navigate back.
-    // In the future, this will insert into a Supabase table.
-    toast.success(`${parsedData?.type === "sale" ? "Sale" : "Inventory"} saved successfully!`);
-    navigate("/home");
+  const handleSave = async () => {
+    if (!parsedData || !profile?.businessId) return;
+    setIsProcessing(true);
+
+    try {
+      if (entryType === "udhaar" || parsedData.type === "udhaar") {
+        const custName = parsedData.customer_name || "Unknown Customer";
+
+        // Parse due_date roughly
+        let dueDateStr = null;
+        if (parsedData.due_date) {
+           // Default to 7 days from now
+           const futureDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+           dueDateStr = futureDate.toISOString().split("T")[0]; // YYYY-MM-DD
+        }
+
+        const { error } = await supabase.from("udhaar_records").insert({
+          business_id: profile.businessId,
+          customer_name: custName,
+          amount_remaining: Number(parsedData.amount) || 0,
+          due_date: dueDateStr,
+          status: "pending"
+        }).select().single();
+        if (error) throw error;
+        toast.success("Udhaar successfully saved to database!");
+
+      } else if (entryType === "sales" || parsedData.type === "sale" || parsedData.type === "income") {
+        const { error } = await supabase.from("sales").insert({
+          business_id: profile.businessId,
+          total_amount: Number(parsedData.amount || parsedData.price) || 0,
+          Vendor: "Direct Sale (Voice)",
+          Date: new Date().toISOString().split("T")[0],
+          created_at: new Date().toISOString()
+        }).select().single();
+        if (error) throw error;
+        toast.success("Sale successfully saved to database!");
+
+      } else {
+        const { error } = await supabase.from("products").insert({
+          business_id: profile.businessId,
+          name: parsedData.product || "Unknown Item",
+          stock: parsedData.quantity || 1,
+          price: parsedData.price || 0,
+        }).select().single();
+        if (error) throw error;
+        toast.success("Inventory successfully saved to database!");
+      }
+      
+      // Clear data and redirect
+      setParsedData(null);
+      if (entryType === "udhaar") navigate("/udhaari");
+      else if (entryType === "sales") navigate("/sales");
+      else navigate("/inventory");
+
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.message || "Failed to save to database.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -181,7 +293,11 @@ RULES:
               {isListening ? "Listening..." : "Tap the mic and speak"}
             </h2>
             <p className="text-sm text-muted-foreground">
-              Example: "5 kilo cheeni khareeda 200 rupaye mein"
+              {entryType === "udhaar"
+                ? 'Example: "Ramesh ko 500 rupaye udhaar diya, agle hafte dega"'
+                : entryType === "sales" 
+                ? 'Example: "500 rupaye ki bikri hui cash mein"' 
+                : 'Example: "5 kilo cheeni khareeda 200 rupaye mein"'}
             </p>
           </div>
 
@@ -239,19 +355,38 @@ RULES:
                 </div>
 
                 <div className="space-y-3">
-                  <DetailRow label="Product" value={parsedData.product} />
-                  <DetailRow 
-                    label="Quantity" 
-                    value={parsedData.quantity ? `${parsedData.quantity} ${parsedData.unit || ''}` : null} 
-                  />
-                  <DetailRow 
-                    label="Price" 
-                    value={parsedData.price ? `₹${parsedData.price}` : null} 
-                  />
+                  {entryType === "udhaar" ? (
+                    <>
+                      <DetailRow label="Customer Name" value={parsedData.customer_name} />
+                      <DetailRow label="Amount" value={parsedData.amount ? `₹${parsedData.amount}` : null} />
+                      <DetailRow label="Due Date" value={parsedData.due_date} />
+                      <DetailRow label="Notes" value={parsedData.description} />
+                    </>
+                  ) : entryType === "sales" ? (
+                    <>
+                      <DetailRow label="Description" value={parsedData.description} />
+                      <DetailRow label="Amount" value={parsedData.amount ? `₹${parsedData.amount}` : null} />
+                      <DetailRow label="Payment Method" value={parsedData.payment_method} />
+                    </>
+                  ) : (
+                    <>
+                      <DetailRow label="Product" value={parsedData.product} />
+                      <DetailRow 
+                        label="Quantity" 
+                        value={parsedData.quantity ? `${parsedData.quantity} ${parsedData.unit || ''}` : null} 
+                      />
+                      <DetailRow 
+                        label="Price" 
+                        value={parsedData.price ? `₹${parsedData.price}` : null} 
+                      />
+                    </>
+                  )}
                 </div>
               </div>
 
-              {!parsedData.product || (!parsedData.quantity && !parsedData.price) ? (
+              { (entryType === "udhaar" && (!parsedData.customer_name || !parsedData.amount)) || 
+                (entryType === "sales" && !parsedData.amount) || 
+                (entryType !== "sales" && entryType !== "udhaar" && (!parsedData.product || (!parsedData.quantity && !parsedData.price))) ? (
                 <div className="flex items-start gap-2 p-3 bg-red-50 text-red-600 rounded-xl mb-4 text-sm">
                   <AlertCircle className="w-5 h-5 shrink-0" />
                   <p>Could not extract complete details. Please try speaking clearly again.</p>

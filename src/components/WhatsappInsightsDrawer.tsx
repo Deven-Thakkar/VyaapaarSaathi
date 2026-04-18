@@ -28,7 +28,7 @@ export default function WhatsappInsightsDrawer({ children }: WhatsappInsightsDra
   const handleSelect = async (type: "daily" | "weekly" | "monthly") => {
     setLoadingType(type);
     
-    const businessId = profile?.business_id || DEFAULT_BUSINESS_ID;
+    const businessId = profile?.businessId || DEFAULT_BUSINESS_ID;
     console.log("Using businessId:", businessId);
 
     try {

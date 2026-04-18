@@ -88,7 +88,7 @@ export default function AddPage() {
                 key={m.key}
                 onClick={() => {
                   if (m.key === "voice") {
-                    navigate("/add/voice");
+                    navigate(`/add/voice?type=${category || "inventory"}`);
                   } else if (m.key === "scan") {
                     if (category === "inventory") {
                       navigate("/inventory/scan");

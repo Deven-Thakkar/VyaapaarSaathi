@@ -78,7 +78,6 @@ export default function SettingsPage() {
         <Section title={t("settings.profile")} icon={<User className="w-4 h-4" />}>
           <Row label="Name" value={profile.name} />
           <Row label="Phone" value={profile.phone} />
-          <Row label="Email" value={profile.email} />
         </Section>
 
         <button
