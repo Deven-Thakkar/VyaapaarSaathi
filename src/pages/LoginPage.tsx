@@ -169,9 +169,7 @@ export default function LoginPage() {
 
       <div className="w-full max-w-sm animate-fade-up">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary-foreground/10 backdrop-blur mb-3">
-            <Sparkles className="w-7 h-7 text-primary-foreground" />
-          </div>
+          <img src="/logo.png" alt="VyaapaarSaathi" className="w-14 h-14 rounded-2xl mx-auto mb-3 object-cover" />
           <h1 className="text-2xl font-extrabold text-primary-foreground">{t("app.name")}</h1>
           <p className="text-xs text-primary-foreground/80 mt-1">{t("app.tagline")}</p>
         </div>

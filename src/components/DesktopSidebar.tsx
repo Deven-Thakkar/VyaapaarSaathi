@@ -29,9 +29,7 @@ export default function DesktopSidebar() {
       onMouseLeave={() => setExpanded(false)}
     >
       <div className="flex items-center gap-2 px-4 py-5 border-b border-border">
-        <div className="w-8 h-8 rounded-lg bg-gradient-auth flex items-center justify-center shrink-0">
-          <Sparkles className="w-4 h-4 text-primary-foreground" />
-        </div>
+        <img src="/logo.png" alt="VyaapaarSaathi" className="w-8 h-8 rounded-lg shrink-0 object-cover" />
         {expanded && (
           <div className="overflow-hidden animate-fade-in">
             <h1 className="text-sm font-bold text-heading whitespace-nowrap">{t("app.name")}</h1>
