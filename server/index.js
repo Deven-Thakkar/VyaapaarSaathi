@@ -183,37 +183,69 @@ app.get("/api/barcode-lookup", async (req, res) => {
   }
 
   try {
-    const apiKey = process.env.BARCODE_LOOKUP_API_KEY || "4k2m9qob1m0cogop0ezmtr4gho81j4";
-    const apiUrl = `https://api.barcodelookup.com/v3/products?barcode=${barcode}&key=${apiKey}`;
-    
     console.log(`🔍 Looking up barcode: ${barcode}`);
+    let productDetails = null;
     
-    const response = await axios.get(apiUrl, { timeout: 10000 });
+    // First attempt: BarcodeLookup API
+    try {
+      const apiKey = process.env.BARCODE_LOOKUP_API_KEY || "4k2m9qob1m0cogop0ezmtr4gho81j4";
+      const apiUrl = `https://api.barcodelookup.com/v3/products?barcode=${barcode}&key=${apiKey}`;
+      const response = await axios.get(apiUrl, { timeout: 8000 });
+      
+      if (response.data.products && response.data.products.length > 0) {
+        const product = response.data.products[0];
+        console.log(`✅ Found product in BarcodeLookup: ${product.title}`);
+        productDetails = {
+          success: true,
+          barcode: barcode,
+          productName: product.title || product.product_name || "Unknown Product",
+          description: product.description || null,
+          image: product.images?.[0] || null,
+          price: product.lowest_recorded_price || product.price || null,
+        };
+      }
+    } catch (blError) {
+      console.log(`⚠️ BarcodeLookup failed/not found (${blError.message}), checking next extensive dataset...`);
+    }
+
+    // Second attempt fallback: OpenFoodFacts (External Dataset)
+    if (!productDetails) {
+      try {
+        const offUrl = `https://world.openfoodfacts.org/api/v0/product/${barcode}.json`;
+        const offResponse = await axios.get(offUrl, { timeout: 8000 });
+        
+        if (offResponse.data && offResponse.data.status === 1) {
+          const product = offResponse.data.product;
+          console.log(`✅ Found product in OpenFoodFacts: ${product.product_name}`);
+          productDetails = {
+            success: true,
+            barcode: barcode,
+            productName: product.product_name || product.generic_name || product.brands || "Unknown Product",
+            description: product.ingredients_text || null,
+            image: product.image_url || product.image_front_url || null,
+            price: null, // Cannot guarantee pricing here
+          };
+        }
+      } catch (offError) {
+        console.log(`⚠️ OpenFoodFacts lookup failed: ${offError.message}`);
+      }
+    }
     
-    if (response.data.products && response.data.products.length > 0) {
-      const product = response.data.products[0];
-      console.log(`✅ Found product: ${product.title}`);
-      res.json({
-        success: true,
-        barcode: barcode,
-        productName: product.title || product.product_name || "Unknown Product",
-        description: product.description || null,
-        image: product.images?.[0] || null,
-        price: product.lowest_recorded_price || product.price || null,
-      });
+    if (productDetails) {
+      res.json(productDetails);
     } else {
-      console.log(`❌ No product found for barcode: ${barcode}`);
+      console.log(`❌ No product found for barcode: ${barcode} in any external datasets`);
       res.status(404).json({ 
         success: false, 
-        error: "Product not found in barcode database",
+        error: "Product not found in external extensive datasets",
         barcode: barcode 
       });
     }
   } catch (err) {
-    console.error("❌ Barcode Lookup API error:", err.message);
+    console.error("❌ Barcode Lookup Proxy error:", err.message);
     res.status(500).json({ 
       success: false,
-      error: "Barcode Lookup API failed", 
+      error: "Barcode Lookup Proxy failed entirely", 
       details: err.message 
     });
   }
