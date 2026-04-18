@@ -74,6 +74,13 @@ const en = {
     outOfStock: "Out of Stock",
     outOfStockSub: "Immediate restock required",
     items: "items",
+    initiatingCall: "Initiating Call...",
+    initiatingCallToast: "Initiating call...",
+    callInitiatedToast: "Call initiated! You will receive a call shortly.",
+    callFailedToast: "Failed to initiate call.",
+    whatsappInsights: "Get WhatsApp Business Insights",
+    aiSuggestionText: "\"Restock sugar & cooking oil before the weekend — demand is up 22%.\"",
+    viewInsights: "View insights",
   },
   add: {
     title: "Add Entry",
@@ -161,6 +168,10 @@ const en = {
     amountPh: "e.g. 5000",
     dueDate: "Due Date",
     save: "Save Entry",
+    noDueDate: "No due date",
+    daysLeft: "{{days}} days left",
+    daysOverdue: "{{days}} days overdue",
+    dueToday: "Due today",
   },
   ai: {
     title: "AI Chatbot",
@@ -227,6 +238,34 @@ const en = {
     deleteError: "Failed to delete customer",
     outstanding: "Outstanding",
   },
+  insights: {
+    analyzing: "Analyzing your business data...",
+    title: "Business Insights",
+    noTransactions: "No transactions found",
+    addSalesPrompt: "Add sales or expenses to see insights.",
+    missingData: "Missing data:",
+    refresh: "Refresh",
+    aiPowered: "AI Powered",
+    sales: "Sales",
+    expenses: "Expenses",
+    udhaar: "Udhaar",
+    predictedCashflow: "Predicted Cashflow",
+    riskLevel: "Risk Level",
+    risk: {
+      high: "High",
+      medium: "Medium",
+      low: "Low"
+    },
+    messages: {
+      "Cash shortage likely. Reduce expenses or collect udhaar urgently.": "Cash shortage likely. Reduce expenses or collect udhaar urgently.",
+      "Large overdue payments outstanding. Follow up immediately.": "Large overdue payments outstanding. Follow up immediately.",
+      "Inventory running low relative to sales. Restock soon to avoid stockout.": "Inventory running low relative to sales. Restock soon to avoid stockout.",
+      "High business risk detected. Reduce fixed costs or increase collections.": "High business risk detected. Reduce fixed costs or increase collections.",
+      "📈 Sales are improving steadily. Great job!": "📈 Sales are improving steadily. Great job!",
+      "⚠️ Expenses increasing — monitor closely.": "⚠️ Expenses increasing — monitor closely.",
+      "Business is stable. Keep monitoring your udhaar recovery rate.": "Business is stable. Keep monitoring your udhaar recovery rate."
+    }
+  }
 };
 export default en;
 export type Translation = typeof en;

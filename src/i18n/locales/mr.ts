@@ -76,6 +76,13 @@ const mr: Translation = {
     outOfStock: "साठा संपला",
     outOfStockSub: "त्वरित पुनर्भरण आवश्यक",
     items: "वस्तू",
+    initiatingCall: "कॉल सुरू करत आहे...",
+    initiatingCallToast: "कॉल सुरू करत आहे...",
+    callInitiatedToast: "कॉल सुरू झाला! तुम्हाला लवकरच एक कॉल येईल.",
+    callFailedToast: "कॉल सुरू करण्यात अयशस्वी.",
+    whatsappInsights: "WhatsApp व्यवसाय अंतर्दृष्टी मिळवा",
+    aiSuggestionText: "\"सप्ताहाअखेरीपूर्वी साखर आणि स्वयंपाकाचे तेल पुनर्भरित करा — मागणी 22% वाढली आहे.\"",
+    viewInsights: "अंतर्दृष्टी पहा",
   },
   add: {
     title: "नोंद जोडा",
@@ -163,6 +170,10 @@ const mr: Translation = {
     amountPh: "उदा. 5000",
     dueDate: "देय दिनांक",
     save: "नोंद जतन करा",
+    noDueDate: "देय दिनांक नाही",
+    daysLeft: "{{days}} दिवस बाकी",
+    daysOverdue: "{{days}} दिवस थकीत",
+    dueToday: "आज देय",
   },
   ai: {
     title: "AI चॅटबॉट",
@@ -229,5 +240,33 @@ const mr: Translation = {
     deleteError: "ग्राहक हटवण्यात अयशस्वी",
     outstanding: "थकबाकी",
   },
+  insights: {
+    analyzing: "तुमच्या व्यवसाय डेटाचे विश्लेषण करत आहे...",
+    title: "व्यवसाय अंतर्दृष्टी",
+    noTransactions: "कोणतेही व्यवहार आढळले नाहीत",
+    addSalesPrompt: "अंतर्दृष्टी पाहण्यासाठी विक्री किंवा खर्च जोडा.",
+    missingData: "गहाळ डेटा:",
+    refresh: "रिफ्रेश",
+    aiPowered: "AI चालित",
+    sales: "विक्री",
+    expenses: "खर्च",
+    udhaar: "उधार",
+    predictedCashflow: "अंदाजित रोख रक्कम",
+    riskLevel: "जोखीम पातळी",
+    risk: {
+      high: "जास्त",
+      medium: "मध्यम",
+      low: "कमी"
+    },
+    messages: {
+      "Cash shortage likely. Reduce expenses or collect udhaar urgently.": "रोखीची कमतरता संभवते. खर्च कमी करा किंवा तातडीने उधार गोळा करा.",
+      "Large overdue payments outstanding. Follow up immediately.": "मोठी थकीत देयके बाकी आहेत. त्वरित पाठपुरावा करा.",
+      "Inventory running low relative to sales. Restock soon to avoid stockout.": "विक्रीच्या तुलनेत साठा कमी होत आहे. साठा संपणे टाळण्यासाठी लवकरच पुनर्भरण करा.",
+      "High business risk detected. Reduce fixed costs or increase collections.": "उच्च व्यवसाय जोखीम आढळली. निश्चित खर्च कमी करा किंवा वसुली वाढवा.",
+      "📈 Sales are improving steadily. Great job!": "📈 विक्री सातत्याने सुधारत आहे. खूप छान!",
+      "⚠️ Expenses increasing — monitor closely.": "⚠️ खर्च वाढत आहेत — बारकाईने लक्ष ठेवा.",
+      "Business is stable. Keep monitoring your udhaar recovery rate.": "व्यवसाय स्थिर आहे. तुमच्या उधार वसुली दरावर लक्ष ठेवा."
+    }
+  }
 };
 export default mr;

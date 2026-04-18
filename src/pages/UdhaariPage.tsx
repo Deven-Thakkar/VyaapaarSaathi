@@ -9,18 +9,18 @@ import { toast } from "sonner";
 
 type Customer = { id: number; name: string; amount: number; dueDate: string | null };
 
-function getDueInfo(dueDate: string | null): { label: string; isOverdue: boolean; isUrgent: boolean } {
-  if (!dueDate) return { label: "No due date", isOverdue: false, isUrgent: false };
+function getDueInfo(dueDate: string | null, t: (key: string, opts?: any) => string): { label: string; isOverdue: boolean; isUrgent: boolean } {
+  if (!dueDate) return { label: t("udhaar.noDueDate"), isOverdue: false, isUrgent: false };
   const now = new Date();
   const due = new Date(dueDate);
   const diffMs = due.getTime() - now.getTime();
   const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
   if (diffDays < 0) {
-    return { label: `${Math.abs(diffDays)} days overdue`, isOverdue: true, isUrgent: true };
+    return { label: t("udhaar.daysOverdue", { days: Math.abs(diffDays) }), isOverdue: true, isUrgent: true };
   } else if (diffDays === 0) {
-    return { label: "Due today", isOverdue: false, isUrgent: true };
+    return { label: t("udhaar.dueToday"), isOverdue: false, isUrgent: true };
   } else {
-    return { label: `${diffDays} days left`, isOverdue: false, isUrgent: diffDays <= 3 };
+    return { label: t("udhaar.daysLeft", { days: diffDays }), isOverdue: false, isUrgent: diffDays <= 3 };
   }
 }
 
@@ -219,7 +219,7 @@ export default function UdhaariPage() {
             </div>
           ) : (
             list.map((c) => {
-              const { label, isOverdue, isUrgent } = getDueInfo(c.dueDate);
+              const { label, isOverdue, isUrgent } = getDueInfo(c.dueDate, t);
               return (
               <div key={c.id} className={`bg-card rounded-2xl card-shadow p-4 ${isOverdue ? "ring-2 ring-destructive/40 bg-destructive/5" : ""}`}>
                 <div className="flex items-center gap-3">
