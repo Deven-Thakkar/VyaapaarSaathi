@@ -22,69 +22,7 @@ app.use(express.json());
 app.use("/api", createChatbotRouter());
 app.use("/api", createInvoiceRouter());
 
-const USE_MOCK_DATA = false;
-let cachedMockData = null;
 
-// ─── Helper: Generate Realistic Mock Demo Data ───
-function generateMockBusinessData() {
-  const today = new Date();
-  const transactions = [];
-  
-  // 1. Transactions (last 180 days for full charts)
-  for (let i = 180; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    
-    // Add some random growth trend over 6 months
-    const trend = 1 + ((180 - i) / 180) * 0.4; // up to 40% growth
-    
-    // Daily income: ₹3000 – ₹8000 (scaled by trend)
-    const dailyIncome = Math.floor((3000 + Math.random() * 5000) * trend);
-    // Daily expense: ₹1500 – ₹5000
-    const dailyExpense = Math.floor((1500 + Math.random() * 3500) * trend);
-    
-    transactions.push({
-      type: "income",
-      amount: dailyIncome,
-      transaction_date: d.toISOString(),
-      category: "Sales",
-      description: "Mock Sales"
-    });
-    
-    transactions.push({
-      type: "expense",
-      amount: dailyExpense,
-      transaction_date: d.toISOString(),
-      category: "Operating Expense",
-      description: "Mock Expense"
-    });
-  }
-
-  // 2. Udhaar (3-5 customers)
-  const udhaar_given = Math.floor(15000 + Math.random() * 25000); // Total pending
-  const overdue_udhaar = Math.floor(udhaar_given * (0.1 + Math.random() * 0.3)); // 10-40% overdue
-
-  // 3. Products
-  const products = [
-    { name: "Premium Basmati Rice 5kg", stock: Math.floor(20 + Math.random() * 50), price: 650 },
-    { name: "Sunflower Oil 1L", stock: Math.floor(40 + Math.random() * 60), price: 145 },
-    { name: "Aashirvaad Atta 10kg", stock: Math.floor(15 + Math.random() * 30), price: 420 },
-    { name: "Tata Salt 1kg", stock: Math.floor(80 + Math.random() * 100), price: 25 },
-    { name: "Maggi Noodles Pack", stock: Math.floor(100 + Math.random() * 150), price: 140 },
-  ];
-  
-  const inventory_value = products.reduce((acc, p) => acc + (p.stock * p.price), 0);
-
-  cachedMockData = {
-    transactions,
-    udhaar_given,
-    overdue_udhaar,
-    products,
-    inventory_value
-  };
-
-  return cachedMockData;
-}
 
 // ─── POST /api/insights-data — time-series + top products from DB ───
 app.post("/api/insights-data", async (req, res) => {
@@ -94,13 +32,6 @@ app.post("/api/insights-data", async (req, res) => {
   try {
     let txns = [];
     let productsList = [];
-    let is_synthetic = USE_MOCK_DATA;
-
-    if (USE_MOCK_DATA) {
-      const mockData = cachedMockData || generateMockBusinessData();
-      txns = mockData.transactions;
-      productsList = mockData.products;
-    } else {
       const since90 = new Date();
       since90.setDate(since90.getDate() - 90);
 
@@ -116,7 +47,6 @@ app.post("/api/insights-data", async (req, res) => {
 
       const { data: prods } = await supabase.from("products").select("name, stock, price").eq("business_id", business_id).order("stock", { ascending: false }).limit(5);
       productsList = prods || [];
-    }
 
     // ── 1. Daily cashflow (last 30 days) ──
     const dailyMap = {};
@@ -140,23 +70,7 @@ app.post("/api/insights-data", async (req, res) => {
         net: vals.income - vals.expense
       }));
 
-    if (daily_cashflow.length < 5) {
-      daily_cashflow = [];
-      const now = new Date();
-      let baseNet = 450;
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        baseNet += (Math.random() * 150 - 60); 
-        if (baseNet < 150) baseNet = 150 + Math.random() * 50;
-        daily_cashflow.push({
-          d: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }),
-          income: Math.round(baseNet + 250),
-          expense: 250,
-          net: Math.round(baseNet)
-        });
-      }
-    }
+
 
     // ── 2. Monthly revenue (last 6 months) ──
     const monthlyMap = {};
@@ -181,22 +95,7 @@ app.post("/api/insights-data", async (req, res) => {
         profit: vals.income - vals.expense
       }));
 
-    if (monthly_revenue.length < 4) {
-      monthly_revenue = [];
-      const now = new Date();
-      let baseV = 12000;
-      for (let i = 5; i >= 0; i--) {
-        const d = new Date(now);
-        d.setMonth(d.getMonth() - i);
-        baseV += (Math.random() * 4000 - 800);
-        monthly_revenue.push({
-          m: d.toLocaleDateString("en-IN", { month: "short" }),
-          v: Math.round(baseV),
-          expense: Math.round(baseV * 0.55),
-          profit: Math.round(baseV * 0.45)
-        });
-      }
-    }
+
 
     const top_products = productsList.map(p => ({
       name: p.name,
@@ -215,8 +114,7 @@ app.post("/api/insights-data", async (req, res) => {
         sales_30d: totalSales,
         expenses_30d: totalExpenses,
         net_30d: totalSales - totalExpenses,
-        has_data: txns.length > 0,
-        is_synthetic
+        has_data: txns.length > 0
       }
     });
 
@@ -228,7 +126,7 @@ app.post("/api/insights-data", async (req, res) => {
 
 
 // ─── Helper: generate insight text from predictions + raw data ───
-function generateInsights(cashflow, risk, sales, expenses, overdue_udhaar, inventory_value, is_synthetic) {
+function generateInsights(cashflow, risk, sales, expenses, overdue_udhaar, inventory_value) {
   const insights = [];
 
   if (cashflow < expenses) {
@@ -277,24 +175,9 @@ app.post("/api/predict", async (req, res) => {
   let sales = 0, expenses = 0, inventory_value = 0;
   let udhaar_given = 0, overdue_udhaar = 0;
   let fixedCosts = 0;
-  let is_synthetic = USE_MOCK_DATA;
 
   try {
-    if (USE_MOCK_DATA) {
-      const mockData = cachedMockData || generateMockBusinessData();
-      
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
-      
-      const currentMonthTxns = mockData.transactions.filter(t => new Date(t.transaction_date) >= startOfMonth);
-      sales = currentMonthTxns.filter(t => t.type === "income").reduce((s, t) => s + Number(t.amount), 0);
-      expenses = currentMonthTxns.filter(t => t.type === "expense").reduce((s, t) => s + Number(t.amount), 0);
-      
-      udhaar_given = mockData.udhaar_given;
-      overdue_udhaar = mockData.overdue_udhaar;
-      inventory_value = mockData.inventory_value;
-    } else if (business_id) {
+    if (business_id) {
       const { data: biz } = await supabase.from("businesses").select("monthly_revenue, cost_stock, cost_salaries, cost_rent, cost_utilities").eq("id", business_id).single();
 
       if (biz) {
@@ -356,8 +239,7 @@ app.post("/api/predict", async (req, res) => {
       sales,
       payload.expenses,
       overdue_udhaar,
-      inventory_value,
-      is_synthetic
+      inventory_value
     );
 
     res.json({
@@ -371,8 +253,7 @@ app.post("/api/predict", async (req, res) => {
         udhaar_given,
         overdue_udhaar,
         inventory_value,
-        has_data:        true,
-        is_synthetic
+        has_data:        true
       }
     });
 
@@ -396,7 +277,8 @@ app.get("/api/barcode-lookup", async (req, res) => {
     
     // First attempt: BarcodeLookup API
     try {
-      const apiKey = process.env.BARCODE_LOOKUP_API_KEY || "4k2m9qob1m0cogop0ezmtr4gho81j4";
+      const apiKey = process.env.BARCODE_LOOKUP_API_KEY;
+      if (!apiKey) throw new Error("BARCODE_LOOKUP_API_KEY not configured");
       const apiUrl = `https://api.barcodelookup.com/v3/products?barcode=${barcode}&key=${apiKey}`;
       const response = await axios.get(apiUrl, { timeout: 8000 });
       

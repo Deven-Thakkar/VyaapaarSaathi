@@ -10,6 +10,9 @@ import twilio from "twilio";
 export function createChatbotRouter() {
   const router = Router();
 
+  // Self URL for internal API calls
+  const SELF_URL = `http://localhost:${process.env.PORT || 5000}`;
+
   // ─── Supabase ───
   const supabase = createClient(
     process.env.SUPABASE_URL,
@@ -88,7 +91,7 @@ export function createChatbotRouter() {
         lowerMsg.includes("business")
       ) {
         try {
-          const mlResponse = await fetch("http://localhost:5000/api/predict", {
+          const mlResponse = await fetch(`${SELF_URL}/api/predict`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ business_id })
@@ -184,7 +187,7 @@ Final answer:
       // 2.5 INVENTORY / STOCK
       if (lowerMsg.includes("stock") || lowerMsg.includes("inventory") || lowerMsg.includes("items") || lowerMsg.includes("product") || lowerMsg.includes("bache") || lowerMsg.includes("bacha")) {
         try {
-          const insightsRes = await fetch("http://localhost:5000/api/insights-data", {
+          const insightsRes = await fetch(`${SELF_URL}/api/insights-data`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ business_id })
@@ -309,7 +312,7 @@ Final answer:
       // 2. Fetch Real Data via Predict API
       let mlData = null;
       try {
-        const mlRes = await fetch("http://localhost:5000/api/predict", {
+        const mlRes = await fetch(`${SELF_URL}/api/predict`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ business_id })

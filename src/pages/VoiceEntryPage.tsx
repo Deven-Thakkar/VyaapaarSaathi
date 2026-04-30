@@ -191,12 +191,31 @@ RULES:
         throw new Error("Invalid response from AI");
       }
 
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("No JSON found in response");
+      let cleanContent = content.trim();
+      
+      // Remove markdown code blocks if present
+      if (cleanContent.startsWith("```json")) {
+        cleanContent = cleanContent.replace(/^```json\s*/, "").replace(/\s*```$/, "");
+      } else if (cleanContent.startsWith("```")) {
+        cleanContent = cleanContent.replace(/^```\s*/, "").replace(/\s*```$/, "");
       }
 
-      const parsed = JSON.parse(jsonMatch[0]) as ParsedData;
+      // Try parsing directly first
+      let parsed: ParsedData;
+      try {
+        parsed = JSON.parse(cleanContent) as ParsedData;
+      } catch (parseError) {
+        // If direct parsing fails, fall back to matching the first '{' and last '}'
+        const firstBrace = cleanContent.indexOf("{");
+        const lastBrace = cleanContent.lastIndexOf("}");
+        if (firstBrace === -1 || lastBrace === -1 || lastBrace < firstBrace) {
+          throw new Error("No JSON object found in response");
+        }
+        
+        const extractedJson = cleanContent.substring(firstBrace, lastBrace + 1);
+        parsed = JSON.parse(extractedJson) as ParsedData;
+      }
+
       setParsedData(parsed);
       toast.success("Voice processed successfully!");
 

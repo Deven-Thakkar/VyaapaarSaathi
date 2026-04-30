@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useProfile, FinancialProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/context/AuthContext";
 
 const langs = [
   { code: "en", label: "English" },
@@ -15,7 +16,14 @@ const langs = [
 export default function SettingsPage() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
-  const { profile, updateProfile } = useProfile();
+  const { profile, updateProfile, clearProfile } = useProfile();
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+    clearProfile();
+    navigate("/login");
+  };
 
   const fmt = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 
@@ -81,7 +89,7 @@ export default function SettingsPage() {
         </Section>
 
         <button
-          onClick={() => navigate("/login")}
+          onClick={handleLogout}
           className="w-full mt-2 flex items-center justify-center gap-2 bg-destructive/10 text-destructive py-3.5 rounded-2xl font-semibold text-sm hover:bg-destructive/20 transition"
         >
           <LogOut className="w-4 h-4" /> {t("settings.logout")}

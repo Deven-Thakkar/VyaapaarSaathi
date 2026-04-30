@@ -42,7 +42,7 @@ export function createInvoiceRouter() {
         {
           headers: {
             ...formData.getHeaders(),
-            'apikey': process.env.OCR_API_KEY || 'K82878004788957',
+            'apikey': process.env.OCR_API_KEY,
             'language': 'eng',
           },
           timeout: 30000,
@@ -289,15 +289,7 @@ function extractProducts(text) {
 
   console.log(`📊 Total products extracted: ${products.length}`);
 
-  // Mock data if extraction fails (fallback for testing)
-  if (products.length === 0) {
-    console.log("⚠️  No products extracted, using mock data for this invoice...");
-    products.push({
-      productName: 'SanDisk Ultra 16 GB MicroSDHC Class 10 48 MB/s Memory Card',
-      quantity: 1,
-      price: 278.61,
-    });
-  }
+
 
   return products;
 }

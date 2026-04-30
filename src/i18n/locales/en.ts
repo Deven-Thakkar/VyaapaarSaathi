@@ -27,6 +27,8 @@ const en = {
     goalPh: "e.g. 25% growth",
     phone: "Phone Number",
     phonePh: "Enter mobile number",
+    email: "Email Address",
+    password: "Password",
     otp: "Enter OTP",
     loginOtp: "Login via OTP",
     getOtp: "Get OTP",

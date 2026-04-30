@@ -19,18 +19,18 @@ export type FinancialProfile = {
 const STORAGE_KEY = "vyaaparsaathi_profile";
 
 const defaultProfile: FinancialProfile = {
-  name: "Rahul Sharma",
-  phone: "+91 98765 43210",
-  email: "rahul@example.com",
-  businessName: "Sharma General Store",
-  businessType: "Retail / Kirana",
-  monthlyRevenue: 285000,
-  investment: 100000,
-  goal: "25% growth",
-  stock: 120000,
-  salaries: 35000,
-  rent: 18000,
-  utilities: 8000,
+  name: "",
+  phone: "",
+  email: "",
+  businessName: "",
+  businessType: "",
+  monthlyRevenue: 0,
+  investment: 0,
+  goal: "",
+  stock: 0,
+  salaries: 0,
+  rent: 0,
+  utilities: 0,
 };
 
 function loadProfile(): FinancialProfile {
@@ -44,6 +44,7 @@ function loadProfile(): FinancialProfile {
 type Ctx = {
   profile: FinancialProfile;
   updateProfile: (patch: Partial<FinancialProfile>) => void;
+  clearProfile: () => void;
 };
 
 const ProfileContext = createContext<Ctx | undefined>(undefined);
@@ -58,8 +59,13 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       return next;
     });
 
+  const clearProfile = () => {
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
+    setProfile(defaultProfile);
+  };
+
   return (
-    <ProfileContext.Provider value={{ profile, updateProfile }}>
+    <ProfileContext.Provider value={{ profile, updateProfile, clearProfile }}>
       {children}
     </ProfileContext.Provider>
   );

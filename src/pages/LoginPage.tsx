@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Phone, ArrowRight, Sparkles, User, Building2, IndianRupee, Target, TrendingUp, Package, Users, Home as HomeIcon, Zap } from "lucide-react";
+import { Mail, Lock, ArrowRight, User, Building2, IndianRupee, Target, TrendingUp, Package, Users, Home as HomeIcon, Zap, Phone, Eye, EyeOff } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useProfile } from "@/context/ProfileContext";
+import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { createCustomer } from "@/lib/customer-api";
-import { getBusinessByPhone } from "@/lib/business-api";
 
 type Tab = "login" | "signup";
 
@@ -14,14 +14,20 @@ export default function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { updateProfile } = useProfile();
+  const { signIn, signUp, user } = useAuth();
   const [tab, setTab] = useState<Tab>("login");
   const [errorMsg, setErrorMsg] = useState("");
-
-  // login state
-  const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // signup state
+  // Login state
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+
+  // Signup state
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [name, setName] = useState("");
   const [signupPhone, setSignupPhone] = useState("");
   const [bizType, setBizType] = useState("");
@@ -42,43 +48,72 @@ export default function LoginPage() {
     { v: "others", l: t("auth.bizTypes.others") },
   ];
 
-  const handleLoginWithPhone = async () => {
+  // If already logged in, redirect
+  if (user) {
+    navigate("/home", { replace: true });
+    return null;
+  }
+
+  const handleLogin = async () => {
     try {
       setErrorMsg("");
       setIsLoading(true);
 
-      if (phone.length < 10) {
-        setErrorMsg("Please enter a valid 10-digit phone number");
+      if (!loginEmail || !loginPassword) {
+        setErrorMsg("Please enter your email and password.");
         return;
       }
 
-      // Fetch business by phone number
-      const business = await getBusinessByPhone(phone);
+      const { user: authUser, error } = await signIn(loginEmail, loginPassword);
 
-      if (!business) {
-        setErrorMsg("No account found with this phone number. Please sign up first.");
+      if (error) {
+        setErrorMsg(error.message || "Invalid email or password.");
         return;
       }
 
-      // Update profile with business data
-      updateProfile({
-        name: business.owner_name,
-        phone: business.phone_number,
-        businessId: business.id,
-        businessName: business.shop_name,
-        businessType: business.business_type,
-        monthlyRevenue: business.monthly_revenue,
-        investment: business.investment_amount,
-        stock: business.cost_stock,
-        salaries: business.cost_salaries,
-        rent: business.cost_rent,
-        utilities: business.cost_utilities,
-      });
+      if (!authUser) {
+        setErrorMsg("Login failed. Please try again.");
+        return;
+      }
+
+      // Fetch business linked to this auth user
+      const { data: business, error: bizError } = await supabase
+        .from("businesses")
+        .select("*")
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
+
+      if (bizError) {
+        console.error("Business fetch error:", bizError);
+      }
+
+      if (business) {
+        updateProfile({
+          name: business.owner_name,
+          phone: business.phone_number || "",
+          email: authUser.email || "",
+          businessId: business.id,
+          businessName: business.shop_name,
+          businessType: business.business_type,
+          monthlyRevenue: business.monthly_revenue,
+          investment: business.investment_amount,
+          stock: business.cost_stock,
+          salaries: business.cost_salaries,
+          rent: business.cost_rent,
+          utilities: business.cost_utilities,
+        });
+      } else {
+        // User exists in auth but no business yet — set basic profile
+        updateProfile({
+          name: authUser.email?.split("@")[0] || "",
+          email: authUser.email || "",
+        });
+      }
 
       navigate("/home");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      setErrorMsg("Failed to login. Please try again.");
+      setErrorMsg(error?.message || "Failed to login. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -89,19 +124,44 @@ export default function LoginPage() {
       setErrorMsg("");
       setIsLoading(true);
 
-      if (!name || !bizType || !revenue) {
-        alert("Please fill all required fields");
+      if (!signupEmail || !signupPassword || !name || !bizType || !revenue) {
+        setErrorMsg("Please fill all required fields.");
         return;
       }
 
-      // Format phone consistently
+      if (signupPassword.length < 6) {
+        setErrorMsg("Password must be at least 6 characters.");
+        return;
+      }
+
+      if (signupPassword !== confirmPassword) {
+        setErrorMsg("Passwords do not match.");
+        return;
+      }
+
+      // 1. Create Supabase Auth user
+      const { user: authUser, error: authError } = await signUp(signupEmail, signupPassword);
+
+      if (authError) {
+        setErrorMsg(authError.message || "Failed to create account.");
+        return;
+      }
+
+      if (!authUser) {
+        setErrorMsg("Account created! Please check your email to verify, then log in.");
+        setTab("login");
+        return;
+      }
+
+      // 2. Create business record linked to auth user
       const phoneForStorage = signupPhone ? `+91${signupPhone}` : null;
 
-      // Insert into Supabase table public.businesses
       const { data: businessData, error: businessError } = await supabase
         .from("businesses")
         .insert([
           {
+            auth_user_id: authUser.id,
+            email: signupEmail,
             owner_name: name,
             phone_number: phoneForStorage,
             shop_name: `${name}'s Shop`,
@@ -118,14 +178,14 @@ export default function LoginPage() {
         .single();
 
       if (businessError) {
-        console.error("Signup error:", businessError);
-        setErrorMsg("Failed to create account. Please try again.");
+        console.error("Business creation error:", businessError);
+        setErrorMsg("Account created but business setup failed. You can set up your business after logging in.");
         return;
       }
 
       const businessId = businessData.id;
 
-      // Create a default customer entry for the business
+      // 3. Create a default customer entry for the business
       try {
         await createCustomer({
           business_id: businessId,
@@ -137,10 +197,11 @@ export default function LoginPage() {
         console.error("Warning: Failed to create initial customer:", customerError);
       }
 
-      // Update local profile state
+      // 4. Update local profile state
       updateProfile({
         name: name,
         phone: phoneForStorage || "",
+        email: signupEmail,
         businessId: businessId,
         businessName: `${name}'s Shop`,
         businessType: bizType,
@@ -153,9 +214,9 @@ export default function LoginPage() {
       });
 
       navigate("/home");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Signup error:", error);
-      setErrorMsg("Failed to complete signup. Please try again.");
+      setErrorMsg(error?.message || "Failed to complete signup. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -180,7 +241,7 @@ export default function LoginPage() {
             {(["login", "signup"] as Tab[]).map((t1) => (
               <button
                 key={t1}
-                onClick={() => setTab(t1)}
+                onClick={() => { setTab(t1); setErrorMsg(""); }}
                 className={`py-2 rounded-lg text-sm font-semibold transition-all ${
                   tab === t1 ? "bg-background text-primary shadow-sm" : "text-muted-foreground"
                 }`}
@@ -193,25 +254,82 @@ export default function LoginPage() {
           {tab === "login" ? (
             <div className="space-y-4">
               {errorMsg && <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-lg">{errorMsg}</div>}
-              <Field icon={<Phone className="w-4 h-4" />} label={t("auth.phone")}>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-muted-foreground">+91</span>
+              <Field icon={<Mail className="w-4 h-4" />} label={t("auth.email") || "Email"}>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="flex-1 bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                />
+              </Field>
+              <Field icon={<Lock className="w-4 h-4" />} label={t("auth.password") || "Password"}>
+                <div className="flex items-center gap-2 flex-1">
                   <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                    placeholder={t("auth.phonePh")}
+                    type={showPassword ? "text" : "password"}
+                    value={loginPassword}
+                    onChange={(e) => setLoginPassword(e.target.value)}
+                    placeholder="••••••••"
                     className="flex-1 bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-muted-foreground hover:text-foreground">
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
               </Field>
-              <PrimaryBtn onClick={handleLoginWithPhone} disabled={phone.length < 10 || isLoading}>
+              <PrimaryBtn onClick={handleLogin} disabled={!loginEmail || !loginPassword || isLoading}>
                 {isLoading ? "Logging in..." : <>{t("auth.cont")} <ArrowRight className="w-4 h-4" /></>}
               </PrimaryBtn>
             </div>
           ) : (
             <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1 scrollbar-hide">
               {errorMsg && <div className="bg-destructive/10 text-destructive text-xs p-2 rounded-lg">{errorMsg}</div>}
+
+              {/* Account credentials */}
+              <div className="pb-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Account</p>
+              </div>
+              <Field icon={<Mail className="w-4 h-4" />} label={t("auth.email") || "Email"}>
+                <input
+                  type="email"
+                  value={signupEmail}
+                  onChange={(e) => setSignupEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                />
+              </Field>
+              <Field icon={<Lock className="w-4 h-4" />} label={t("auth.password") || "Password"}>
+                <input
+                  type="password"
+                  value={signupPassword}
+                  onChange={(e) => setSignupPassword(e.target.value)}
+                  placeholder="Min. 6 characters"
+                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                />
+              </Field>
+              <Field icon={<Lock className="w-4 h-4" />} label="Confirm Password">
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                />
+              </Field>
+
+              {/* Business details */}
+              <div className="pt-2 pb-1">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Business Details</p>
+              </div>
+              <Field icon={<User className="w-4 h-4" />} label={t("auth.name")}>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder={t("auth.namePh")}
+                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
+                />
+              </Field>
               <Field icon={<Phone className="w-4 h-4" />} label={t("auth.phone")}>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium text-muted-foreground">+91</span>
@@ -223,14 +341,6 @@ export default function LoginPage() {
                     className="flex-1 bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
                   />
                 </div>
-              </Field>
-              <Field icon={<User className="w-4 h-4" />} label={t("auth.name")}>
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t("auth.namePh")}
-                  className="w-full bg-transparent outline-none text-sm font-medium text-foreground placeholder:text-muted-foreground/50"
-                />
               </Field>
               <Field icon={<Building2 className="w-4 h-4" />} label={t("auth.businessType")}>
                 <select
@@ -278,7 +388,7 @@ export default function LoginPage() {
                 <NumInput value={utilities} setValue={setUtilities} placeholder={t("auth.utilitiesPh")} />
               </Field>
 
-              <PrimaryBtn onClick={handleSignup} disabled={isLoading || !name || !bizType || !revenue || signupPhone.length < 10}>
+              <PrimaryBtn onClick={handleSignup} disabled={isLoading || !signupEmail || !signupPassword || !name || !bizType || !revenue}>
                 {isLoading ? "Signing up..." : <>{t("auth.cont")} <ArrowRight className="w-4 h-4" /></>}
               </PrimaryBtn>
             </div>

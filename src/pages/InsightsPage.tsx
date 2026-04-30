@@ -97,7 +97,7 @@ export default function InsightsPage() {
 
   const { daily_cashflow, monthly_revenue, top_products, summary } = data;
 
-  if (!summary.has_data && !summary.is_synthetic) {
+  if (!summary.has_data) {
     return (
       <AppShell>
         <div className="max-w-6xl mx-auto p-4 lg:p-6">
