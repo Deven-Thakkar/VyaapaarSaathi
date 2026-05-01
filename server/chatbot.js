@@ -293,20 +293,21 @@ Final answer:
     try {
       const { type, business_id } = req.body;
       
-      // 1. Fetch User Phone (fallback to test number)
-      let userPhone = process.env.TEST_USER_PHONE;
-      try {
-        const { data: userData, error: userError } = await supabase
-          .from("businesses") // Assumed table, fallback gracefully
-          .select("phone")
-          .eq("id", business_id)
-          .single();
-          
-        if (!userError && userData && userData.phone) {
-          userPhone = userData.phone.startsWith("whatsapp:") ? userData.phone : `whatsapp:${userData.phone}`;
-        }
-      } catch (e) {
-        console.log("Could not fetch user phone, using fallback.");
+      // 1. Fetch User Phone from DB
+      let userPhone = null;
+      const { data: userData, error: userError } = await supabase
+        .from("businesses")
+        .select("phone_number")
+        .eq("id", business_id)
+        .single();
+
+      if (!userError && userData && userData.phone_number) {
+        const raw = userData.phone_number;
+        userPhone = raw.startsWith("whatsapp:") ? raw : `whatsapp:${raw}`;
+      }
+
+      if (!userPhone) {
+        return res.status(400).json({ error: "No phone number found for this business. Please update your profile with a valid phone number." });
       }
 
       // 2. Fetch Real Data via Predict API
@@ -380,22 +381,17 @@ Generate the insight now:`;
   router.post("/bolna-call", async (req, res) => {
     try {
       const { business_id } = req.body;
-      let phone_number = process.env.TEST_USER_PHONE;
-
-      // Try to fetch real user phone from DB
+      // Fetch real user phone from DB
+      let phone_number = null;
       if (business_id) {
-        try {
-          const { data: userData, error: userError } = await supabase
-            .from("businesses")
-            .select("phone")
-            .eq("id", business_id)
-            .single();
-            
-          if (!userError && userData && userData.phone) {
-            phone_number = userData.phone;
-          }
-        } catch (e) {
-          console.log("Could not fetch user phone, using fallback.");
+        const { data: userData, error: userError } = await supabase
+          .from("businesses")
+          .select("phone_number")
+          .eq("id", business_id)
+          .single();
+
+        if (!userError && userData && userData.phone_number) {
+          phone_number = userData.phone_number;
         }
       }
 
