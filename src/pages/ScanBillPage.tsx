@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { API_BASE } from "@/lib/chatbot-api";
+import { useUpgradeModal } from "@/context/UpgradeModalContext";
 
 interface ParsedInvoiceData {
   vendor: string;
@@ -17,6 +18,7 @@ interface ParsedInvoiceData {
 export default function ScanBillPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const { showUpgrade } = useUpgradeModal();
   const [isProcessing, setIsProcessing] = useState(false);
   const [parsedData, setParsedData] = useState<ParsedInvoiceData | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -40,6 +42,10 @@ export default function ScanBillPage() {
       const result = await response.json();
 
       if (!response.ok) {
+        if (response.status === 429 || result.code === "RATE_LIMIT_UPGRADE") {
+          showUpgrade("invoice scanning");
+          return;
+        }
         throw new Error(result.error || "Failed to process invoice");
       }
 

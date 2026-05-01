@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import { sendChatMessage } from "@/lib/chatbot-api";
 
 import { useProfile } from "@/context/ProfileContext";
+import { useUpgradeModal } from "@/context/UpgradeModalContext";
 
 type Msg = { role: "user" | "ai"; text: string };
 
@@ -15,6 +16,7 @@ const initialMessages: Msg[] = [
 
 export default function AiPage() {
   const { profile } = useProfile();
+  const { showUpgrade } = useUpgradeModal();
   const { t } = useTranslation();
   const [messages, setMessages] = useState<Msg[]>(initialMessages);
   const [input, setInput] = useState("");
@@ -36,15 +38,24 @@ export default function AiPage() {
       const businessIdToUse = profile?.businessId || "7d1f8a08-ff5b-4bb6-8b9d-f9a3912b9b86";
       const data = await sendChatMessage(text, businessIdToUse);
       setMessages((m) => [...m, { role: "ai", text: data.reply }]);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Chat API error:", err);
-      setMessages((m) => [
-        ...m,
-        {
-          role: "ai",
-          text: "Sorry, connection issue hai. Please try again.",
-        },
-      ]);
+      
+      // If it's a rate limit error, show the upgrade modal
+      if (err.message?.toLowerCase().includes("upgrade")) {
+        showUpgrade("AI chat messages");
+        // Remove the user's message since it failed
+        setMessages((m) => m.slice(0, -1));
+        setInput(text); // Put their text back in the input box
+      } else {
+        setMessages((m) => [
+          ...m,
+          {
+            role: "ai",
+            text: "Sorry, connection issue hai. Please try again.",
+          },
+        ]);
+      }
     } finally {
       setIsLoading(false);
     }

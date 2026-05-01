@@ -2,6 +2,7 @@ import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import twilio from "twilio";
+import { chatLimiter, whatsappLimiter, bolnaCallLimiter } from "./rateLimiters.js";
 
 /**
  * Creates and returns an Express Router with all chatbot-related routes.
@@ -75,7 +76,7 @@ export function createChatbotRouter() {
   });
 
   // POST /chat
-  router.post("/chat", async (req, res) => {
+  router.post("/chat", chatLimiter, async (req, res) => {
     try {
       const { message, business_id } = req.body;
       const lowerMsg = message.toLowerCase();
@@ -289,7 +290,7 @@ Final answer:
   });
 
   // POST /send-whatsapp-summary
-  router.post("/send-whatsapp-summary", async (req, res) => {
+  router.post("/send-whatsapp-summary", whatsappLimiter, async (req, res) => {
     try {
       const { type, business_id } = req.body;
       
@@ -378,7 +379,7 @@ Generate the insight now:`;
   });
 
   // POST /bolna-call
-  router.post("/bolna-call", async (req, res) => {
+  router.post("/bolna-call", bolnaCallLimiter, async (req, res) => {
     try {
       const { business_id } = req.body;
       // Fetch real user phone from DB

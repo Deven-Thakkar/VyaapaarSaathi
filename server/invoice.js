@@ -4,6 +4,7 @@ import FormData from "form-data";
 import fs from "fs";
 import axios from "axios";
 import path from "path";
+import { invoiceLimiter } from "./rateLimiters.js";
 
 export function createInvoiceRouter() {
   const router = Router();
@@ -16,7 +17,7 @@ export function createInvoiceRouter() {
 
   const upload = multer({ dest: 'uploads/' });
 
-  router.post('/process-invoice', upload.single('file'), async (req, res) => {
+  router.post('/process-invoice', invoiceLimiter, upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: 'No file uploaded.' });

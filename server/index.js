@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 
 import { createChatbotRouter } from "./chatbot.js";
 import { createInvoiceRouter } from "./invoice.js";
+import { invoiceLimiter, barcodeLimiter, insightsLimiter } from "./rateLimiters.js";
 
 // Load environment variables from parent directory
 const __filename = fileURLToPath(import.meta.url);
@@ -24,8 +25,8 @@ app.use("/api", createInvoiceRouter());
 
 
 
-// ─── POST /api/insights-data — time-series + top products from DB ───
-app.post("/api/insights-data", async (req, res) => {
+// ─── POST /api/insights-data ───
+app.post("/api/insights-data", insightsLimiter, async (req, res) => {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
   const { business_id } = req.body;
 
@@ -167,8 +168,8 @@ function ruleBased(payload) {
   };
 }
 
-// ─── POST /api/predict — fully data-driven ───
-app.post("/api/predict", async (req, res) => {
+// ─── POST /api/predict ───
+app.post("/api/predict", insightsLimiter, async (req, res) => {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_KEY);
   const { business_id } = req.body;
 
@@ -263,8 +264,8 @@ app.post("/api/predict", async (req, res) => {
   }
 });
 
-// ✅ Barcode Lookup API Proxy
-app.get("/api/barcode-lookup", async (req, res) => {
+// ─── Barcode Lookup API Proxy ───
+app.get("/api/barcode-lookup", barcodeLimiter, async (req, res) => {
   const { barcode } = req.query;
   
   if (!barcode) {

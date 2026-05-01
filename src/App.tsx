@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "./context/AuthContext";
 import { ProfileProvider } from "./context/ProfileContext";
+import { UpgradeModalProvider } from "./context/UpgradeModalContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
@@ -39,8 +40,9 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <ProfileProvider>
-          <Toaster />
-          <Sonner />
+          <UpgradeModalProvider>
+            <Toaster />
+            <Sonner />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Navigate to="/login" replace />} />
@@ -67,6 +69,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+          </UpgradeModalProvider>
         </ProfileProvider>
       </AuthProvider>
     </TooltipProvider>

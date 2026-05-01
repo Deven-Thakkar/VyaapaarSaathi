@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, AlertTriangle, CheckCircle2, Loader2, RefreshCw, Info, PackageX } from 'lucide-react';
 import { useProfile } from "@/context/ProfileContext";
+import { useUpgradeModal } from "@/context/UpgradeModalContext";
 
 interface Insight {
   level: 'success' | 'warning' | 'danger' | 'info';
@@ -36,6 +37,7 @@ import { useTranslation } from 'react-i18next';
 export default function SmartInsights() {
   const { t } = useTranslation();
   const { profile } = useProfile();
+  const { showUpgrade } = useUpgradeModal();
   const [data, setData] = useState<PredictResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -50,7 +52,13 @@ export default function SmartInsights() {
       body: JSON.stringify({ business_id: profile?.businessId ?? null })
     })
       .then(res => {
-        if (!res.ok) return res.json().then(e => Promise.reject(new Error(e.error || `Error ${res.status}`)));
+        if (!res.ok) {
+          if (res.status === 429) {
+            showUpgrade("Insights API");
+            return Promise.reject(new Error("Rate limit reached."));
+          }
+          return res.json().then(e => Promise.reject(new Error(e.error || `Error ${res.status}`)));
+        }
         return res.json();
       })
       .then(d => { setData(d); setLoading(false); })
