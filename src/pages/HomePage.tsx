@@ -85,7 +85,7 @@ export default function HomePage() {
     const loadingToast = toast.loading(t("home.initiatingCallToast"));
     try {
       const businessId = profile?.businessId;
-      await triggerBolnaCall(businessId);
+      await triggerBolnaCall(businessId, profile?.phone);
       toast.success(t("home.callInitiatedToast"), { id: loadingToast });
     } catch (error: any) {
       console.error(error);

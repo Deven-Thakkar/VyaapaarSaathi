@@ -120,11 +120,11 @@ export async function sendWhatsappSummary(
 /**
  * Trigger Bolna AI Call
  */
-export async function triggerBolnaCall(businessId?: string): Promise<any> {
+export async function triggerBolnaCall(businessId?: string, phone?: string): Promise<any> {
   const res = await fetch(`${API_BASE}/bolna-call`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ business_id: businessId }),
+    body: JSON.stringify({ business_id: businessId, phone }),
   });
 
   if (!res.ok) {

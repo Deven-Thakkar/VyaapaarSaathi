@@ -433,10 +433,11 @@ Generate the insight now:`;
   // POST /bolna-call
   router.post("/bolna-call", bolnaCallLimiter, async (req, res) => {
     try {
-      const { business_id } = req.body;
-      // Fetch real user phone from DB
-      let phone_number = null;
-      if (business_id) {
+      const { business_id, phone } = req.body;
+      
+      // Use phone from frontend if available, otherwise try DB (may fail if RLS active and no service key)
+      let phone_number = phone || null;
+      if (!phone_number && business_id) {
         const { data: userData, error: userError } = await supabase
           .from("businesses")
           .select("phone_number")
