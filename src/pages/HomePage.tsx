@@ -7,6 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { triggerBolnaCall } from "@/lib/chatbot-api";
 import { useProfile } from "@/context/ProfileContext";
+import { API_BASE } from "@/lib/chatbot-api";
 import { toast } from "sonner";
 import SmartInsights from "@/components/SmartInsights";
 
@@ -51,7 +52,7 @@ export default function HomePage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await fetch("/api/predict", {
+        const res = await fetch(`${API_BASE}/predict`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ business_id: profile?.businessId ?? null }),

@@ -4,6 +4,8 @@ import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabase";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { ArrowLeft, AlertCircle, Trash2, Plus, Minus, Check, Loader2, X } from "lucide-react";
+import { API_BASE } from "@/lib/chatbot-api";
+import { useUpgradeModal } from "@/context/UpgradeModalContext";
 
 interface CartItem {
   barcode: string;
@@ -23,6 +25,7 @@ interface PendingProduct {
 export default function ScanBarcodeForSalesPage() {
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { showUpgrade } = useUpgradeModal();
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [pendingProduct, setPendingProduct] = useState<PendingProduct | null>(null);
@@ -55,10 +58,14 @@ export default function ScanBarcodeForSalesPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`/api/barcode-lookup?barcode=${barcode}`);
+      const response = await fetch(`${API_BASE}/barcode-lookup?barcode=${barcode}`);
       const data = await response.json();
 
       if (!response.ok || !data.success) {
+        if (response.status === 429 || data.code === "RATE_LIMIT_UPGRADE") {
+          showUpgrade("barcode scanning");
+          return;
+        }
         setError(`Product not found for barcode: ${barcode}`);
         setIsLoading(false);
         return;

@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from "recharts";
 import { useProfile } from "@/context/ProfileContext";
+import { API_BASE } from "@/lib/chatbot-api";
 
 const PIE_COLORS = ["hsl(217 91% 60%)", "hsl(142 71% 45%)", "hsl(38 92% 50%)", "hsl(262 83% 58%)"];
 
@@ -24,11 +25,11 @@ export default function InsightsPage() {
     const body = JSON.stringify({ business_id: profile?.businessId ?? null });
 
     Promise.all([
-      fetch("/api/insights-data", { method: "POST", headers: { "Content-Type": "application/json" }, body }).then(res => {
+      fetch(`${API_BASE}/insights-data`, { method: "POST", headers: { "Content-Type": "application/json" }, body }).then(res => {
         if (!res.ok) throw new Error("Failed to load chart data");
         return res.json();
       }),
-      fetch("/api/predict", { method: "POST", headers: { "Content-Type": "application/json" }, body }).then(res => {
+      fetch(`${API_BASE}/predict`, { method: "POST", headers: { "Content-Type": "application/json" }, body }).then(res => {
         if (!res.ok) throw new Error("Failed to load predict data");
         return res.json();
       })
@@ -47,7 +48,7 @@ export default function InsightsPage() {
   const handleDownload = async () => {
     setGenerating(true);
     try {
-      const response = await fetch("/api/download-report", {
+      const response = await fetch(`${API_BASE}/download-report`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ business_id: profile?.businessId ?? null }),

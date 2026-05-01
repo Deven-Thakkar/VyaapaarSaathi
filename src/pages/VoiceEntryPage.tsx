@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/context/ProfileContext";
 import { useUpgradeModal } from "@/context/UpgradeModalContext";
+import { API_BASE } from "@/lib/chatbot-api";
 
 interface ParsedData {
   type: "sale" | "inventory" | "income" | "udhaar" | null;
@@ -98,7 +99,7 @@ export default function VoiceEntryPage() {
     setIsProcessing(true);
     
     try {
-      const res = await fetch("/api/process-voice", {
+      const res = await fetch(`${API_BASE}/process-voice`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

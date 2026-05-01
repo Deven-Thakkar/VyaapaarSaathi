@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/context/ProfileContext";
 import { supabase } from "@/lib/supabase";
 import { ArrowLeft, AlertCircle, Check, Upload, Loader2, Eye, Package } from "lucide-react";
+import { API_BASE } from "@/lib/chatbot-api";
+import { useUpgradeModal } from "@/context/UpgradeModalContext";
 
 interface ExtractedItem {
   productName: string;
@@ -23,6 +25,7 @@ export default function ScanBillForSalesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { showUpgrade } = useUpgradeModal();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if businessId exists
@@ -64,12 +67,16 @@ export default function ScanBillForSalesPage() {
       formData.append("file", file);
 
       console.log("Uploading file to backend...");
-      const response = await fetch("/api/process-invoice", {
+      const response = await fetch(`${API_BASE}/process-invoice`, {
         method: "POST",
         body: formData,
       });
 
       if (!response.ok) {
+        if (response.status === 429 || result.code === "RATE_LIMIT_UPGRADE") {
+          showUpgrade("invoice scanning");
+          return;
+        }
         throw new Error("Failed to process invoice");
       }
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, AlertTriangle, CheckCircle2, Loader2, RefreshCw, Info, PackageX } from 'lucide-react';
 import { useProfile } from "@/context/ProfileContext";
 import { useUpgradeModal } from "@/context/UpgradeModalContext";
+import { API_BASE } from "@/lib/chatbot-api";
 
 interface Insight {
   level: 'success' | 'warning' | 'danger' | 'info';
@@ -46,7 +47,7 @@ export default function SmartInsights() {
     setLoading(true);
     setError(null);
 
-    fetch('/api/predict', {
+    fetch(`${API_BASE}/predict`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ business_id: profile?.businessId ?? null })
