@@ -103,11 +103,37 @@ export default function LoginPage() {
           utilities: business.cost_utilities,
         });
       } else {
-        // User exists in auth but no business yet — set basic profile
-        updateProfile({
-          name: authUser.email?.split("@")[0] || "",
-          email: authUser.email || "",
-        });
+        // Recover from previous failed business creation by creating a default one now
+        const defaultName = authUser.email?.split("@")[0] || "My";
+        const { data: newBiz, error: createError } = await supabase
+          .from("businesses")
+          .insert([{
+            auth_user_id: authUser.id,
+            email: authUser.email,
+            owner_name: defaultName,
+            shop_name: `${defaultName}'s Shop`,
+            business_type: "retail",
+            monthly_revenue: 50000,
+          }])
+          .select()
+          .single();
+
+        if (newBiz) {
+          updateProfile({
+            name: newBiz.owner_name,
+            email: authUser.email || "",
+            businessId: newBiz.id,
+            businessName: newBiz.shop_name,
+            businessType: newBiz.business_type,
+            monthlyRevenue: newBiz.monthly_revenue,
+          });
+        } else {
+          console.error("Failed to auto-recover business:", createError);
+          updateProfile({
+            name: defaultName,
+            email: authUser.email || "",
+          });
+        }
       }
 
       navigate("/home");
@@ -149,6 +175,15 @@ export default function LoginPage() {
 
       if (!authUser) {
         setErrorMsg("Account created! Please check your email to verify, then log in.");
+        setTab("login");
+        return;
+      }
+
+      // Force sign in immediately to ensure the session is active before inserting business data.
+      // This prevents the RLS (Row Level Security) 42501 error!
+      const { error: sessionError } = await signIn(signupEmail, signupPassword);
+      if (sessionError) {
+        setErrorMsg("Account created! Please verify your email and then log in to complete business setup.");
         setTab("login");
         return;
       }
