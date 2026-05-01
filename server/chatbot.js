@@ -2,7 +2,7 @@ import { Router } from "express";
 import { createClient } from "@supabase/supabase-js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import twilio from "twilio";
-import { chatLimiter, whatsappLimiter, bolnaCallLimiter } from "./rateLimiters.js";
+import { chatLimiter, whatsappLimiter, bolnaCallLimiter, voiceLimiter } from "./rateLimiters.js";
 
 /**
  * Creates and returns an Express Router with all chatbot-related routes.
@@ -68,7 +68,59 @@ export function createChatbotRouter() {
     return "AI temporarily unavailable";
   }
 
-  // ─── Routes ───
+  // Routes
+
+  // POST /process-voice (Sarvam Proxy)
+  router.post("/process-voice", voiceLimiter, async (req, res) => {
+    try {
+      const { text, entryType, business_id } = req.body;
+      const SARVAM_API_KEY = process.env.SARVAM_API_KEY;
+      
+      if (!SARVAM_API_KEY) {
+        return res.status(500).json({ error: "Sarvam API key missing in server config" });
+      }
+
+      let systemPrompt = "";
+      if (entryType === "udhaar") {
+        systemPrompt = `Return ONLY valid JSON. No extra text.
+FORMAT: { "type": "udhaar", "customer_name": string, "amount": number, "description": string | null, "due_date": string | null }
+RULES: Extract customer name, amount, description, and due date. MUST extract amount as valid number.`;
+      } else if (entryType === "sales") {
+        systemPrompt = `Return ONLY valid JSON. No extra text.
+FORMAT: { "type": "sale" | "income", "amount": number, "description": string, "payment_method": "cash" | "upi" | "udhaar" | null }
+RULES: Extract total amount, description, map payment methods (qr/online->upi, nakad->cash, baaki->udhaar). MUST extract amount as valid number.`;
+      } else {
+        systemPrompt = `Return ONLY valid JSON. No extra text.
+FORMAT: { "type": "sale" | "inventory", "product": string, "quantity": number, "unit": "kg" | "g" | "litre" | "packet" | "piece" | null, "price": number | null }
+RULES: sold->sale, bought->inventory. Translate basic hindi to english (cheeni->sugar). Extract numbers.`;
+      }
+
+      const response = await fetch("https://api.sarvam.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + SARVAM_API_KEY,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "sarvam-m",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: text }
+          ]
+        })
+      });
+
+      const data = await response.json();
+      const content = data?.choices?.[0]?.message?.content;
+      
+      if (!content) throw new Error("Invalid response from AI");
+      
+      res.json({ content });
+    } catch (err) {
+      console.error("Sarvam error:", err);
+      res.status(500).json({ error: err.message });
+    }
+  });
 
   // Health check
   router.get("/health", (req, res) => {

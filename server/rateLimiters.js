@@ -77,6 +77,19 @@ export const invoiceLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+export const voiceLimiter = rateLimit({
+  windowMs: YEAR_MS,
+  max: 10,
+  keyGenerator: keyByBusiness,
+  validate: { trustProxy: false, xForwardedForHeader: false },
+  message: {
+    error: "You have reached the free limit for voice entries (10 entries). Please upgrade to continue.",
+    code: "RATE_LIMIT_UPGRADE"
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export const barcodeLimiter = rateLimit({
   windowMs: YEAR_MS,
   max: 10,

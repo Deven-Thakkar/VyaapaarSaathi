@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "@/context/ProfileContext";
+import { useUpgradeModal } from "@/context/UpgradeModalContext";
 
 interface ParsedData {
   type: "sale" | "inventory" | "income" | "udhaar" | null;
@@ -25,6 +26,7 @@ export default function VoiceEntryPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { showUpgrade } = useUpgradeModal();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const entryType = searchParams.get("type") || "inventory"; // "inventory" or "sales" or "udhaar"
@@ -95,97 +97,28 @@ export default function VoiceEntryPage() {
   const processSpeech = async (text: string) => {
     setIsProcessing(true);
     
-    const SARVAM_API_KEY = import.meta.env.VITE_SARVAM_API_KEY;
-    if (!SARVAM_API_KEY) {
-      toast.error("Sarvam API key is missing in environment variables.");
-      setIsProcessing(false);
-      return;
-    }
-
-    let systemPrompt = "";
-    if (entryType === "udhaar") {
-      systemPrompt = `
-Return ONLY valid JSON. No extra text.
-
-FORMAT:
-{
-  "type": "udhaar",
-  "customer_name": string,
-  "amount": number,
-  "description": string | null,
-  "due_date": string | null
-}
-
-RULES:
-- Extract the customer name (e.g. "Ramesh ko 500 udhaar diya" -> customer_name: "Ramesh").
-- Extract the total amount given as udhaar, credit, or baaki.
-- Extract any short description if provided.
-- Extract when they promised to pay back if mentioned (e.g. "kal" -> "Tomorrow", "agle hafte" -> "Next Week", "10 din baad" -> "In 10 days"). 
-- MUST extract amount as a valid number.
-`;
-    } else if (entryType === "sales") {
-      systemPrompt = `
-Return ONLY valid JSON. No extra text.
-
-FORMAT:
-{
-  "type": "sale" | "income",
-  "amount": number,
-  "description": string,
-  "payment_method": "cash" | "upi" | "udhaar" | null
-}
-
-RULES:
-- Extract the total amount received, earned or sold for (e.g. "500 rupaye ki bikri" -> amount: 500).
-- Extract description of what was sold or source of income (e.g. "bikri", "sale", "shoes sold", "services").
-- Map payment methods: 
-   - paytm, gpay, phonepe, qr, online -> "upi"
-   - nakad, rokda -> "cash"
-   - baaki, udhaar, baad mein dega -> "udhaar"
-- Translate description briefly to English (e.g., "joote beche" -> "shoes sold").
-- MUST extract amount as a valid number.
-`;
-    } else {
-      systemPrompt = `
-Return ONLY valid JSON. No extra text.
-
-FORMAT:
-{
-  "type": "sale" | "inventory",
-  "product": string,
-  "quantity": number,
-  "unit": "kg" | "g" | "litre" | "packet" | "piece" | null,
-  "price": number | null
-}
-
-RULES:
-- sold, becha -> sale
-- add, bought, khareeda, laya -> inventory
-- cheeni -> sugar, chawal -> rice, tel -> oil, doodh -> milk, atta -> flour
-- kilo -> kg, packet -> packet
-- Extract numbers for quantity
-- Extract price if ₹, rs, rupees present
-`;
-    }
-
     try {
-      const res = await fetch("https://api.sarvam.ai/v1/chat/completions", {
+      const res = await fetch("/api/process-voice", {
         method: "POST",
-        headers: {
-          "Authorization": "Bearer " + SARVAM_API_KEY,
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "sarvam-m",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: text }
-          ]
+          text,
+          entryType,
+          business_id: profile?.businessId
         })
       });
 
       const data = await res.json();
-      const content = data?.choices?.[0]?.message?.content;
+      
+      if (!res.ok) {
+        if (res.status === 429 || data.code === "RATE_LIMIT_UPGRADE") {
+          showUpgrade("voice entries");
+          return;
+        }
+        throw new Error(data.error || "Failed to process voice");
+      }
+
+      const content = data.content;
 
       if (!content) {
         throw new Error("Invalid response from AI");
